@@ -11,7 +11,6 @@
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, sans-serif; }
     body { background-color: var(--bg); color: var(--text); padding: 20px 12px; min-height: 100vh; display: flex; flex-direction: column; align-items: center; }
     
-    /* LOGIN */
     #auth-view { display: flex; justify-content: center; align-items: center; width: 100%; min-height: 80vh; }
     .form-box { max-width: 320px; width: 100%; background: #f1f7fe; overflow: hidden; border-radius: 16px; box-shadow: 0 10px 25px rgba(0,0,0,0.08); text-align: center; }
     .auth-form { display: flex; flex-direction: column; padding: 32px 24px 24px; gap: 14px; }
@@ -22,7 +21,6 @@
     .auth-form button { background-color: var(--primary); color: #fff; border: 0; border-radius: 24px; padding: 12px; font-weight: 600; cursor: pointer; }
     .auth-msg { font-size: 0.8rem; padding: 6px; border-radius: 6px; display: none; background: #fee2e2; color: #b91c1c; margin-bottom: 5px;}
 
-    /* APP */
     #app-view { display: none; width: 100%; max-width: 600px; }
     header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; width: 100%;}
     
@@ -61,7 +59,7 @@
 </head>
 <body>
 
-  <!-- AUTENTICACIÓN: AQUÍ APLICAMOS EL BLINDAJE onsubmit="procesarAuth(event)" -->
+  <!-- AUTENTICACIÓN BLINDADA -->
   <div id="auth-view">
     <div class="form-box">
       <form class="auth-form" id="formAutenticacion" onsubmit="procesarAuth(event)">
@@ -80,13 +78,11 @@
     </div>
   </div>
 
-  <!-- DASHBOARD PRINCIPAL -->
   <div id="app-view">
     <header>
       <div>
         <h1 style="font-size: 1.4rem;">Presupuesto</h1>
         <div style="font-size: 0.8rem; color: gray;" id="etiquetaUsuario"></div>
-        <!-- BLINDAJE INLINE -->
         <button class="btn-logout" onclick="cerrarSesion()">Cerrar Sesión</button>
       </div>
       <a href="mercado.html" class="btn-nav">🛒 Ir a Mercado</a>
@@ -141,16 +137,13 @@
   </div>
 
   <script>
-    // =========================================================================
-    // CONEXIÓN SEGURA Y CONTROLADA A SUPABASE
-    // =========================================================================
     let supabase;
     try {
       const SUPABASE_URL = "https://xqowrstjyzlyrczifmca.supabase.co";
       const SUPABASE_KEY = "sb_publishable_g0m2XAZRFxKXOfJh8ejKVg_FfsWXly-";
       supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
     } catch (e) {
-      alert("Error crítico iniciando Supabase. Revisa las claves: " + e.message);
+      alert("Error iniciando Supabase: " + e.message);
     }
 
     const formatearMoneda = (n) => new Intl.NumberFormat('es-CO', {style:'currency',currency:'COP',maximumFractionDigits:0}).format(n);
@@ -158,7 +151,6 @@
     let miGraficaCat = null;
     let miGraficaPers = null;
 
-    // ================= LOGICA DE UI (BOTONES INLINE) =================
     function alternarModoAuth() {
       modoRegistro = !modoRegistro;
       document.getElementById('tituloAuth').textContent = modoRegistro ? 'Registrarse' : 'Iniciar Sesión';
@@ -198,19 +190,15 @@
         document.getElementById('auth-view').style.display = 'none';
         document.getElementById('app-view').style.display = 'block';
         document.getElementById('etiquetaUsuario').innerHTML = `Usuario: <strong>${s.nombre}</strong>`;
-        ajustarTipo();
-        cargarCategorias(); 
-        cargarDashboard();
+        ajustarTipo(); cargarCategorias(); cargarDashboard();
       } else {
         document.getElementById('auth-view').style.display = 'flex';
         document.getElementById('app-view').style.display = 'none';
       }
     }
 
-    // ================= AUTENTICACIÓN (EL BLINDAJE CONTRA EL "?") =================
     async function procesarAuth(e) {
-      e.preventDefault(); // ¡ESTO EVITA EL SIGNO DE INTERROGACIÓN Y LA RECARGA!
-      
+      e.preventDefault(); 
       const btn = document.getElementById('btnAuthSubmit');
       btn.disabled = true; btn.textContent = "Conectando...";
       
@@ -220,8 +208,7 @@
 
       try {
         if (modoRegistro) {
-          // Registro
-          const { data: ext, error: errExt } = await supabase.from('usuarios_hogar').select('*').eq('email', email);
+          const { data: ext } = await supabase.from('usuarios_hogar').select('*').eq('email', email);
           if (ext && ext.length > 0) {
             mostrarError("El correo ya está registrado.");
             btn.disabled = false; btn.textContent = "Continuar";
@@ -230,9 +217,7 @@
           const { data, error } = await supabase.from('usuarios_hogar').insert([{ nombre, email, password }]).select();
           if(error) throw error;
           iniciarSesionLocal(data[0]);
-
         } else {
-          // Login
           const { data, error } = await supabase.from('usuarios_hogar').select('*').eq('email', email).eq('password', password);
           if(error) throw error;
           if (data.length === 0) {
@@ -245,11 +230,9 @@
       } catch (error) {
         mostrarError("Hubo un error comunicándose con la base de datos: " + error.message);
       }
-      
       btn.disabled = false; btn.textContent = "Continuar";
     }
 
-    // ================= FUNCIONES RESTANTES CON TRY/CATCH =================
     async function cargarCategorias() {
       try {
         const { data } = await supabase.from('categorias_gastos').select('*').order('nombre');
