@@ -4,12 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Dashboard Analítico - Nube</title>
-  
-  <!-- SDK de Supabase -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <!-- Chart.js -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  
   <style>
     :root { --bg: #f3f4f6; --card-bg: #ffffff; --primary: #0066ff; --text: #1f2937; --border: #e5e7eb; --success: #10b981; --danger: #ef4444; }
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, sans-serif; }
@@ -46,6 +42,7 @@
     @media (min-width: 500px) { .charts-grid { grid-template-columns: 1fr 1fr; } }
     .chart-box { background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 8px; padding: 12px; text-align: center; min-width: 0; display: flex; flex-direction: column; align-items: center; }
     .chart-container { position: relative; height: 180px; width: 100%; }
+    .chart-container-large { position: relative; height: 250px; width: 100%; margin-top: 15px;}
     
     .accounts-wrap { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 16px; }
     .account-pill { background: #eff6ff; border: 1px solid #bfdbfe; padding: 8px 6px; border-radius: 8px; text-align: center; }
@@ -63,7 +60,7 @@
 </head>
 <body>
 
-  <!-- AUTENTICACIÓN -->
+  <!-- VISTA DE LOGIN -->
   <div id="auth-view">
     <div class="form-box">
       <form class="auth-form" id="formAutenticacion">
@@ -94,23 +91,37 @@
 
     <section class="card">
       <div class="balance-main">
-        <div style="font-size: 0.85rem; color: gray; font-weight: 600;">SALDO TOTAL</div>
+        <div style="font-size: 0.85rem; color: gray; font-weight: 600;">SALDO TOTAL (Histórico)</div>
         <div class="balance-total" id="saldoDisponible">$0</div>
       </div>
       <div id="alertaTendencia"></div>
+      
+      <div style="font-size: 1.05rem; font-weight: bold; margin-bottom: 10px; margin-top: 15px;">Resumen del Mes Actual</div>
       <div class="grid-2">
         <div class="stat-box"><div style="font-size: 0.75rem; color: gray; font-weight: 600;">Ingresos</div><div style="font-size: 1.1rem; font-weight: 700; color: var(--success);" id="totalIngresos">$0</div></div>
         <div class="stat-box"><div style="font-size: 0.75rem; color: gray; font-weight: 600;">Gastos</div><div style="font-size: 1.1rem; font-weight: 700; color: var(--danger);" id="totalGastos">$0</div></div>
       </div>
+      
       <div class="charts-grid">
-        <div class="chart-box"><h3>Categorías</h3><div class="chart-container"><canvas id="graficaCategorias"></canvas></div></div>
-        <div class="chart-box"><h3>Personas</h3><div class="chart-container"><canvas id="graficaPersonas"></canvas></div></div>
+        <div class="chart-box"><h3>Gastos por Categoría</h3><div class="chart-container"><canvas id="graficaCategorias"></canvas></div></div>
+        <div class="chart-box"><h3>Gastos por Persona</h3><div class="chart-container"><canvas id="graficaPersonas"></canvas></div></div>
       </div>
+      
+      <div style="font-size: 0.85rem; color: gray; font-weight: 600; margin-top: 20px; margin-bottom: 5px;">DISTRIBUCIÓN DE CUENTAS</div>
       <div class="accounts-wrap" id="contenedorCuentas"></div>
     </section>
 
+    <!-- NUEVA SECCIÓN: EVOLUCIÓN HISTÓRICA MENSUAL -->
     <section class="card">
-      <h2 style="font-size: 1.05rem; margin-bottom: 12px;">Transacción</h2>
+      <h2 style="font-size: 1.05rem; margin-bottom: 6px;">Evolución Financiera Mensual</h2>
+      <p style="font-size: 0.8rem; color: gray; margin-bottom: 12px;">Compara tus ingresos frente a tus gastos a lo largo del tiempo para medir tu capacidad de ahorro.</p>
+      <div class="chart-container-large">
+        <canvas id="graficaEvolucion"></canvas>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2 style="font-size: 1.05rem; margin-bottom: 12px;">Registrar Transacción</h2>
       <form id="formMovimiento">
         <div class="row">
           <div><select id="tipo" required id="selectTipo"><option value="Gasto">Gasto</option><option value="Ingreso">Ingreso</option></select></div>
@@ -126,32 +137,34 @@
     </section>
 
     <section class="card">
-      <h2 style="font-size: 1.05rem; margin-bottom: 12px;">Partidas</h2>
+      <h2 style="font-size: 1.05rem; margin-bottom: 12px;">Partidas de Gasto</h2>
       <form id="formCat" style="flex-direction: row; gap: 8px;">
-        <input type="text" id="nuevaCat" placeholder="Nueva..." required>
+        <input type="text" id="nuevaCat" placeholder="Nueva categoría..." required>
         <button type="submit" class="btn-primary" style="width: auto;">Añadir</button>
       </form>
       <ul id="listaCatAdmin" style="list-style: none;"></ul>
     </section>
 
     <section class="card">
-      <h2 style="font-size: 1.05rem; margin-bottom: 12px;">Historial</h2>
+      <h2 style="font-size: 1.05rem; margin-bottom: 12px;">Últimos Movimientos</h2>
       <ul class="mov-list" id="listaMovimientos"></ul>
     </section>
   </div>
 
   <script>
-    // ================= SOLUCIÓN DE CONFLICTO DE VARIABLES =================
+    // ================= CONEXIÓN A SUPABASE =================
     const SUPABASE_URL = "https://xqowrstjyzlyrczifmca.supabase.co";
     const SUPABASE_KEY = "sb_publishable_g0m2XAZRFxKXOfJh8ejKVg_FfsWXly-";
     
-    // Cambiamos el nombre de la variable para evitar el error "has already been declared"
-    const clienteSupabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    let clienteSupabase;
+    try { clienteSupabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY); } 
+    catch (e) { alert("Error iniciando Supabase: " + e.message); }
 
     const formatearMoneda = (n) => new Intl.NumberFormat('es-CO', {style:'currency',currency:'COP',maximumFractionDigits:0}).format(n);
     let modoRegistro = true;
     let miGraficaCat = null;
     let miGraficaPers = null;
+    let miGraficaEvolucion = null; // Nueva gráfica
 
     // EVENTOS UI
     document.getElementById('btnAlternar').addEventListener('click', () => {
@@ -203,10 +216,8 @@
     // ================= LÓGICA DE LOGIN / REGISTRO =================
     document.getElementById('formAutenticacion').addEventListener('submit', async function(e) {
       e.preventDefault(); 
-      
       const btn = document.getElementById('btnAuthSubmit');
-      btn.disabled = true; 
-      btn.textContent = "Conectando...";
+      btn.disabled = true; btn.textContent = "Conectando...";
       
       const email = document.getElementById('inputEmail').value.trim().toLowerCase();
       const password = document.getElementById('inputPassword').value.trim();
@@ -214,22 +225,18 @@
 
       try {
         if (modoRegistro) {
-          // REGISTRO
           const { data: ext, error: errExt } = await clienteSupabase.from('usuarios_hogar').select('*').eq('email', email);
-          
           if (errExt) throw errExt;
           if (ext && ext.length > 0) {
-            mostrarError("El correo ya está registrado. Haz clic en 'Inicia Sesión'.");
+            mostrarError("El correo ya está registrado. Inicia sesión.");
             btn.disabled = false; btn.textContent = "Continuar";
             return;
           }
           
           const { data, error } = await clienteSupabase.from('usuarios_hogar').insert([{ nombre, email, password }]).select();
           if (error) throw error;
-          
           iniciarSesionLocal(data[0]);
         } else {
-          // LOGIN
           const { data, error } = await clienteSupabase.from('usuarios_hogar').select('*').eq('email', email).eq('password', password);
           if (error) throw error;
           if (data.length === 0) {
@@ -239,10 +246,7 @@
           }
           iniciarSesionLocal(data[0]);
         }
-      } catch (error) {
-        mostrarError("Hubo un error comunicándose con la base de datos: " + error.message);
-      }
-      
+      } catch (error) { mostrarError("Error: " + error.message); }
       btn.disabled = false; btn.textContent = "Continuar";
     });
 
@@ -258,7 +262,7 @@
         
         document.querySelectorAll('.btn-eliminar-cat').forEach(b => {
           b.addEventListener('click', async (e) => {
-            if(confirm('¿Borrar?')) { 
+            if(confirm('¿Borrar categoría?')) { 
               await clienteSupabase.from('categorias_gastos').delete().eq('id', e.target.getAttribute('data-id')); 
               cargarCategorias(); 
             }
@@ -282,27 +286,35 @@
         const { data: movs } = await clienteSupabase.from('flujo_hogar').select('*').order('fecha', { ascending: false });
         if(!movs) return;
 
+        // MATEMÁTICA 1: TOTALES GLOBALES (Histórico)
+        const ingGlob = movs.filter(m=>m.tipo==='Ingreso').reduce((a,b)=>a+Number(b.monto),0);
+        const gasGlob = movs.filter(m=>m.tipo==='Gasto').reduce((a,b)=>a+Number(b.monto),0);
+        document.getElementById('saldoDisponible').textContent = formatearMoneda(ingGlob - gasGlob);
+
+        // MATEMÁTICA 2: MES ACTUAL
         const mesActual = new Date().getMonth();
         const movsMes = movs.filter(m => new Date(m.fecha).getMonth() === mesActual);
-
-        const ing = movs.filter(m=>m.tipo==='Ingreso'); const gas = movs.filter(m=>m.tipo==='Gasto');
-        document.getElementById('saldoDisponible').textContent = formatearMoneda(ing.reduce((a,b)=>a+Number(b.monto),0) - gas.reduce((a,b)=>a+Number(b.monto),0));
 
         const ingMes = movsMes.filter(m=>m.tipo==='Ingreso').reduce((a,b)=>a+Number(b.monto),0);
         const gasMes = movsMes.filter(m=>m.tipo==='Gasto').reduce((a,b)=>a+Number(b.monto),0);
         document.getElementById('totalIngresos').textContent = formatearMoneda(ingMes);
         document.getElementById('totalGastos').textContent = formatearMoneda(gasMes);
 
+        // Alertas de Presupuesto del Mes
         const alerta = document.getElementById('alertaTendencia');
         if (ingMes > 0) {
           const pct = (gasMes / ingMes) * 100;
-          if (pct > 85) { alerta.className = 'alert-banner bad'; alerta.innerHTML = `⚠️ Has gastado el ${Math.round(pct)}% del mes.`; } 
-          else if (pct < 60) { alerta.className = 'alert-banner good'; alerta.innerHTML = `🌟 Ahorro alto. Gastaste el ${Math.round(pct)}%.`; } 
+          if (pct > 85) { alerta.className = 'alert-banner bad'; alerta.innerHTML = `⚠️ Has gastado el ${Math.round(pct)}% de tus ingresos del mes.`; } 
+          else if (pct < 60) { alerta.className = 'alert-banner good'; alerta.innerHTML = `🌟 Excelente nivel de ahorro. Gastaste el ${Math.round(pct)}%.`; } 
           else { alerta.style.display = 'none'; }
         } else { alerta.style.display = 'none'; }
 
+        // MATEMÁTICA 3: AGRUPACIÓN PARA GRÁFICAS DE PASTEL (Mes Actual)
         const gasCat = {}; const gasPers = {};
-        movsMes.filter(m=>m.tipo==='Gasto').forEach(m => { gasCat[m.categoria] = (gasCat[m.categoria] || 0) + Number(m.monto); gasPers[m.persona] = (gasPers[m.persona] || 0) + Number(m.monto); });
+        movsMes.filter(m=>m.tipo==='Gasto').forEach(m => { 
+          gasCat[m.categoria] = (gasCat[m.categoria] || 0) + Number(m.monto); 
+          gasPers[m.persona] = (gasPers[m.persona] || 0) + Number(m.monto); 
+        });
 
         if (miGraficaCat) miGraficaCat.destroy();
         miGraficaCat = new Chart(document.getElementById('graficaCategorias').getContext('2d'), { type: 'doughnut', data: { labels: Object.keys(gasCat), datasets: [{ data: Object.values(gasCat), backgroundColor: ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'] }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: {font:{size:10}} } } } });
@@ -310,24 +322,51 @@
         if (miGraficaPers) miGraficaPers.destroy();
         miGraficaPers = new Chart(document.getElementById('graficaPersonas').getContext('2d'), { type: 'pie', data: { labels: Object.keys(gasPers), datasets: [{ data: Object.values(gasPers), backgroundColor: ['#f43f5e', '#0ea5e9', '#14b8a6', '#f59e0b'] }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: {font:{size:10}} } } } });
 
+        // MATEMÁTICA 4: AGRUPACIÓN HISTÓRICA MENSUAL PARA LA NUEVA GRÁFICA
+        const mesesEvolucion = {};
+        movs.forEach(m => {
+          const fechaObj = new Date(m.fecha);
+          const mesAnio = fechaObj.toLocaleDateString('es-CO', { month: 'short', year: 'numeric' }).toUpperCase();
+          if (!mesesEvolucion[mesAnio]) mesesEvolucion[mesAnio] = { ingresos: 0, gastos: 0 };
+          
+          if (m.tipo === 'Ingreso') { mesesEvolucion[mesAnio].ingresos += Number(m.monto); } 
+          else { mesesEvolucion[mesAnio].gastos += Number(m.monto); }
+        });
+
+        // Supabase nos da los datos del más nuevo al más viejo, para la gráfica queremos el orden cronológico (izquierda a derecha)
+        const etiquetasMeses = Object.keys(mesesEvolucion).reverse();
+        const datosIngresos = etiquetasMeses.map(mes => mesesEvolucion[mes].ingresos);
+        const datosGastos = etiquetasMeses.map(mes => mesesEvolucion[mes].gastos);
+
+        if (miGraficaEvolucion) miGraficaEvolucion.destroy();
+        miGraficaEvolucion = new Chart(document.getElementById('graficaEvolucion').getContext('2d'), {
+          type: 'bar',
+          data: {
+            labels: etiquetasMeses,
+            datasets: [
+              { label: 'Ingresos', data: datosIngresos, backgroundColor: '#10b981', borderRadius: 4 },
+              { label: 'Gastos', data: datosGastos, backgroundColor: '#ef4444', borderRadius: 4 }
+            ]
+          },
+          options: { 
+            responsive: true, maintainAspectRatio: false, 
+            plugins: { legend: { position: 'top' } },
+            scales: { y: { beginAtZero: true } }
+          }
+        });
+
+        // RENDERIZADO DE CUENTAS GLOBALES
+        const ing = movs.filter(m=>m.tipo==='Ingreso'); const gas = movs.filter(m=>m.tipo==='Gasto');
         document.getElementById('contenedorCuentas').innerHTML = ['Efectivo', 'Cuenta Bancaria', 'Billetera Digital'].map(cta => {
           const s = ing.filter(m=>m.cuenta===cta).reduce((a,b)=>a+Number(b.monto),0) - gas.filter(m=>m.cuenta===cta).reduce((a,b)=>a+Number(b.monto),0);
           return `<div class="account-pill"><div style="font-size:0.7rem; color:#1e40af; font-weight:600;">${cta}</div><div style="font-weight:bold; color:${s<0?'var(--danger)':'#1e3a8a'}">${formatearMoneda(s)}</div></div>`;
         }).join('');
 
-        document.getElementById('listaMovimientos').innerHTML = movsMes.slice(0,10).map(m => {
+        // RENDERIZADO DE MOVIMIENTOS RECIENTES
+        document.getElementById('listaMovimientos').innerHTML = movs.slice(0,10).map(m => {
           const esI = m.tipo==='Ingreso';
-          return `<li class="mov-item ${m.tipo.toLowerCase()}"><div><span style="font-weight:600; font-size:0.95rem;">${m.descripcion}</span><span style="font-size:0.75rem; color:gray; display:block;">${esI?'Aporte':m.categoria} • <b>${m.persona}</b> • ${m.cuenta}</span></div><div style="text-align:right"><div style="font-weight:700; color:${esI?'var(--success)':'#111827'}">${esI?'+':'-'}${formatearMoneda(m.monto)}</div><button style="background:none; border:none; color:red; text-decoration:underline; cursor:pointer; font-size:0.75rem; padding:0; margin-top:4px;" class="btn-eliminar-mov" data-id="${m.id}">Eliminar</button></div></li>`;
+          return `<li class="mov-item ${m.tipo.toLowerCase()}"><div><span style="font-weight:600; font-size:0.95rem;">${m.descripcion}</span><span style="font-size:0.75rem; color:gray; display:block;">${esI?'Aporte':m.categoria} • <b>${m.persona}</b> • ${m.cuenta}</span></div><div style="text-align:right"><div style="font-weight:700; color:${esI?'var(--success)':'#111827'}">${esI?'+':'-'}${formatearMoneda(m.monto)}</div><button style="background:none; border:none; color:red; text-decoration:underline; cursor:pointer; font-size:0.75rem; padding:0; margin-top:4px;" onclick="eliminarMovimiento(${m.id})">Eliminar</button></div></li>`;
         }).join('');
-
-        document.querySelectorAll('.btn-eliminar-mov').forEach(b => {
-          b.addEventListener('click', async (e) => { 
-            if(confirm('¿Eliminar registro?')){ 
-              await clienteSupabase.from('flujo_hogar').delete().eq('id', e.target.getAttribute('data-id')); 
-              cargarDashboard(); 
-            } 
-          });
-        });
 
       } catch(err) { console.error(err); }
     }
@@ -351,6 +390,13 @@
       
       btn.disabled = false; btn.textContent = "Guardar";
     });
+
+    async function eliminarMovimiento(id) {
+      if(confirm('¿Eliminar registro?')){ 
+        await clienteSupabase.from('flujo_hogar').delete().eq('id', id); 
+        cargarDashboard(); 
+      }
+    }
 
     verificarSesion();
   </script>
