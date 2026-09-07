@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard Analítico - Nube</title>
+  
+  <!-- SDK de Supabase -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  
+  <style>
+    :root { --bg: #f3f4f6; --card-bg: #ffffff; --primary: #0066ff; --text: #1f2937; --border: #e5e7eb; --success: #10b981; --danger: #ef4444; }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, sans-serif; }
+    body { background-color: var(--bg); color: var(--text); padding: 20px 12px; min-height: 100vh; display: flex; flex-direction: column; align-items: center; }
+    
+    /* LOGIN */
+    #auth-view { display: flex; justify-content: center; align-items: center; width: 100%; min-height: 80vh; }
+    .form-box { max-width: 320px; width: 100%; background: #f1f7fe; overflow: hidden; border-radius: 16px; box-shadow: 0 10px 25px rgba(0,0,0,0.08); text-align: center; }
+    .auth-form { display: flex; flex-direction: column; padding: 32px 24px 24px; gap: 14px; }
+    .form-container { overflow: hidden; border-radius: 8px; background-color: #fff; border: 1px solid #dbeafe; }
+    .input-field { background: none; border: 0; outline: 0; height: 42px; width: 100%; border-bottom: 1px solid #eee; font-size: 0.9rem; padding: 8px 15px; }
+    .form-section { padding: 16px; font-size: 0.85rem; background-color: #e0ecfb; }
+    .form-section a { font-weight: bold; color: var(--primary); cursor: pointer; text-decoration:underline;}
+    .auth-form button { background-color: var(--primary); color: #fff; border: 0; border-radius: 24px; padding: 12px; font-weight: 600; cursor: pointer; }
+    .auth-msg { font-size: 0.8rem; padding: 6px; border-radius: 6px; display: none; background: #fee2e2; color: #b91c1c; }
+
+    /* APP */
+    #app-view { display: none; width: 100%; max-width: 600px; }
+    header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; width: 100%;}
+    
+    /* BOTÓN DE MERCADO MUY VISIBLE */
+    .btn-nav { background: #0066ff; color: #ffffff; padding: 10px 16px; border-radius: 8px; font-size: 0.9rem; font-weight: bold; text-decoration: none; display: inline-flex; align-items: center; gap: 6px;}
+    .btn-logout { background: #fee2e2; color: #ef4444; border: none; padding: 6px 12px; border-radius: 4px; font-size: 0.75rem; font-weight: bold; cursor: pointer;}
+    
+    .card { background: var(--card-bg); border-radius: 12px; padding: 20px; border: 1px solid var(--border); margin-bottom: 16px; width: 100%; }
+    .balance-main { text-align: center; padding-bottom: 12px; border-bottom: 1px solid var(--border); margin-bottom: 12px; }
+    .balance-total { font-size: 2.2rem; font-weight: 800; color: #111827; }
+    
+    .alert-banner { display:flex; align-items:center; gap:8px; padding: 10px; border-radius: 8px; font-size: 0.85rem; font-weight: 600; margin-bottom: 12px; justify-content: center; }
+    .alert-banner.good { background: #dcfce7; color: #166534; border: 1px solid #bbf7d0; }
+    .alert-banner.bad { background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; }
+
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
+    .stat-box { padding: 10px; border-radius: 8px; background: #f9fafb; text-align: center; border: 1px solid var(--border); }
+    
+    .charts-grid { display: grid; grid-template-columns: 1fr; gap: 16px; margin-top: 20px; width: 100%; }
+    @media (min-width: 500px) { .charts-grid { grid-template-columns: 1fr 1fr; } }
+    .chart-box { background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 8px; padding: 12px; text-align: center; min-width: 0; display: flex; flex-direction: column; align-items: center; }
+    .chart-container { position: relative; height: 180px; width: 100%; }
+    
+    .accounts-wrap { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 16px; }
+    .account-pill { background: #eff6ff; border: 1px solid #bfdbfe; padding: 8px 6px; border-radius: 8px; text-align: center; }
+    
+    form { display: flex; flex-direction: column; gap: 12px; }
+    .row { display: flex; gap: 10px; } .row > div { flex: 1; }
+    input, select, button { padding: 10px; border-radius: 8px; border: 1px solid var(--border); width: 100%; outline: none; }
+    button.btn-primary { background: var(--primary); color: #fff; font-weight: 600; border: none; cursor: pointer; }
+    
+    .mov-list { list-style: none; display: flex; flex-direction: column; gap: 8px; }
+    .mov-item { display: flex; justify-content: space-between; padding: 12px; background: #f9fafb; border-radius: 8px; border-left: 4px solid; }
+    .mov-item.ingreso { border-left-color: var(--success); } .mov-item.gasto { border-left-color: var(--danger); }
+    .cat-item { display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; background: #f8fafc; border: 1px solid var(--border); border-radius: 6px; margin-bottom: 6px; font-size: 0.85rem; }
+  </style>
+</head>
+<body>
+
+  <!-- AUTENTICACIÓN -->
+  <div id="auth-view">
+    <div class="form-box">
+      <form class="auth-form" id="formAutenticacion">
+        <span class="auth-title" id="tituloAuth" style="font-size: 1.4rem;">Registrarse</span>
+        <div id="authError" class="auth-msg"></div>
+        <div class="form-container">
+          <input type="text" class="input-field" id="inputNombre" placeholder="Tu Nombre Completo" required>
+          <input type="email" class="input-field" id="inputEmail" placeholder="Correo electrónico" required>
+          <input type="password" class="input-field" id="inputPassword" placeholder="Contraseña" required>
+        </div>
+        <button type="submit" id="btnAuthSubmit">Continuar</button>
+      </form>
+      <div class="form-section">
+        <p id="textoAlternarAuth">¿Ya tienes cuenta? <a id="enlaceAlternar" style="cursor: pointer;">Inicia Sesión</a></p>
+      </div>
+    </div>
+  </div>
+
+  <!-- DASHBOARD PRINCIPAL -->
+  <div id="app-view">
+    <header>
+      <div>
+        <h1 style="font-size: 1.4rem;">Presupuesto</h1>
+        <div style="font-size: 0.8rem; color: gray;" id="etiquetaUsuario"></div>
+        <button class="btn-logout" id="btnCerrarSesion">Cerrar Sesión</button>
+      </div>
+      <!-- AQUÍ ESTÁ EL BOTÓN VISIBLE QUE TE LLEVA AL MERCADO -->
+      <a href="mercado.html" class="btn-nav">🛒 Ir a Mercado</a>
+    </header>
+
+    <section class="card">
+      <div class="balance-main">
+        <div style="font-size: 0.85rem; color: gray; font-weight: 600;">SALDO TOTAL</div>
+        <div class="balance-total" id="saldoDisponible">$0</div>
+      </div>
+      <div id="alertaTendencia"></div>
+      <div class="grid-2">
+        <div class="stat-box"><div style="font-size: 0.75rem; color: gray; font-weight: 600;">Ingresos</div><div style="font-size: 1.1rem; font-weight: 700; color: var(--success);" id="totalIngresos">$0</div></div>
+        <div class="stat-box"><div style="font-size: 0.75rem; color: gray; font-weight: 600;">Gastos</div><div style="font-size: 1.1rem; font-weight: 700; color: var(--danger);" id="totalGastos">$0</div></div>
+      </div>
+      <div class="charts-grid">
+        <div class="chart-box"><h3>Categorías</h3><div class="chart-container"><canvas id="graficaCategorias"></canvas></div></div>
+        <div class="chart-box"><h3>Personas</h3><div class="chart-container"><canvas id="graficaPersonas"></canvas></div></div>
+      </div>
+      <div class="accounts-wrap" id="contenedorCuentas"></div>
+    </section>
+
+    <section class="card">
+      <h2 style="font-size: 1.05rem; margin-bottom: 12px;">Transacción</h2>
+      <form id="formMovimiento">
+        <div class="row">
+          <div><select id="tipo" required id="selectTipo"><option value="Gasto">Gasto</option><option value="Ingreso">Ingreso</option></select></div>
+          <div><input type="number" id="monto" placeholder="Monto $" step="0.01" required></div>
+        </div>
+        <div><input type="text" id="desc" placeholder="Descripción" required></div>
+        <div class="row">
+          <div><select id="cuenta" required><option>Billetera Digital</option><option>Cuenta Bancaria</option><option>Efectivo</option></select></div>
+          <div id="cajaCat"><select id="cat" required></select></div>
+        </div>
+        <button type="submit" class="btn-primary" id="btnGuardar">Guardar</button>
+      </form>
+    </section>
+
+    <section class="card">
+      <h2 style="font-size: 1.05rem; margin-bottom: 12px;">Partidas</h2>
+      <form id="formCat" style="flex-direction: row; gap: 8px;">
+        <input type="text" id="nuevaCat" placeholder="Nueva..." required>
+        <button type="submit" class="btn-primary" style="width: auto;">Añadir</button>
+      </form>
+      <ul id="listaCatAdmin" style="list-style: none;"></ul>
+    </section>
+
+    <section class="card">
+      <h2 style="font-size: 1.05rem; margin-bottom: 12px;">Historial</h2>
+      <ul class="mov-list" id="listaMovimientos"></ul>
+    </section>
+  </div>
+
+  <script>
+    // CREDENCIALES
+    const SUPABASE_URL = "https://xqowrstjyzlyrczifmca.supabase.co";
+    const SUPABASE_KEY = "sb_publishable_g0m2XAZRFxKXOfJh8ejKVg_FfsWXly-";
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+    const formatearMoneda = (n) => new Intl.NumberFormat('es-CO', {style:'currency',currency:'COP',maximumFractionDigits:0}).format(n);
+    let modoRegistro = true;
+    let miGraficaCat = null;
+    let miGraficaPers = null;
+
+    // EVENTOS UI LOGIN
+    document.getElementById('enlaceAlternar').addEventListener('click', () => {
+      modoRegistro = !modoRegistro;
+      document.getElementById('tituloAuth').textContent = modoRegistro ? 'Registrarse' : 'Iniciar Sesión';
+      document.getElementById('inputNombre').style.display = modoRegistro ? 'block' : 'none';
+      document.getElementById('inputNombre').required = modoRegistro;
+      document.getElementById('textoAlternarAuth').innerHTML = modoRegistro ? '¿Ya tienes cuenta? <a id="enlaceAlternar" style="cursor:pointer; text-decoration:underline;">Inicia Sesión</a>' : '¿No tienes cuenta? <a id="enlaceAlternar" style="cursor:pointer; text-decoration:underline;">Regístrate</a>';
+      document.getElementById('authError').style.display = 'none';
+      document.getElementById('enlaceAlternar').addEventListener('click', arguments.callee);
+    });
+
+    document.getElementById('tipo').addEventListener('change', () => {
+      const esI = document.getElementById('tipo').value === 'Ingreso';
+      document.getElementById('cajaCat').style.display = esI ? 'none' : 'block';
+      document.getElementById('cat').required = !esI;
+    });
+
+    document.getElementById('btnCerrarSesion').addEventListener('click', () => {
+      localStorage.removeItem('app_hogar_sesion_activa');
+      verificarSesion();
+    });
+
+    // ================= AUTENTICACIÓN A PRUEBA DE FALLOS =================
+    document.getElementById('formAutenticacion').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const btn = document.getElementById('btnAuthSubmit');
+      btn.disabled = true; btn.textContent = "Conectando...";
+      
+      const email = document.getElementById('inputEmail').value.trim().toLowerCase();
+      const password = document.getElementById('inputPassword').value.trim();
+      const nombre = document.getElementById('inputNombre').value.trim();
+
+      if (modoRegistro) {
+        // VALIDACIÓN: ¿Existe el correo?
+        const { data: ext, error: errExt } = await supabase.from('usuarios_hogar').select('*').eq('email', email);
+        if (ext && ext.length > 0) {
+          mostrarError("El correo ya está registrado. Haz clic en 'Inicia Sesión'.");
+          btn.disabled = false; btn.textContent = "Continuar";
+          return;
+        }
+
+        // REGISTRO (INSERT)
+        const { data, error } = await supabase.from('usuarios_hogar').insert([{ nombre, email, password }]).select();
+        if(error) {
+          mostrarError("Error BBDD: " + error.message);
+        } else {
+          iniciarSesion(data[0]);
+        }
+
+      } else {
+        // LOGIN (SELECT)
+        const { data, error } = await supabase.from('usuarios_hogar').select('*').eq('email', email).eq('password', password);
+        if(error) {
+          mostrarError("Error BBDD: " + error.message);
+        } else if (data.length === 0) {
+          mostrarError("Correo o contraseña incorrectos.");
+        } else {
+          iniciarSesion(data[0]);
+        }
+      }
+      btn.disabled = false; btn.textContent = "Continuar";
+    });
+
+    function mostrarError(msg) { 
+      const err = document.getElementById('authError'); 
+      err.textContent = msg; err.style.display = 'block'; 
+    }
+
+    function iniciarSesion(u) { 
+      localStorage.setItem('app_hogar_sesion_activa', JSON.stringify(u)); 
+      verificarSesion(); 
+    }
+
+    function verificarSesion() {
+      const s = JSON.parse(localStorage.getItem('app_hogar_sesion_activa'));
+      if (s) {
+        document.getElementById('auth-view').style.display = 'none';
+        document.getElementById('app-view').style.display = 'block';
+        document.getElementById('etiquetaUsuario').innerHTML = `Usuario: <strong>${s.nombre}</strong>`;
+        document.getElementById('tipo').dispatchEvent(new Event('change'));
+        cargarCategorias(); 
+        cargarDashboard();
+      } else {
+        document.getElementById('auth-view').style.display = 'flex';
+        document.getElementById('app-view').style.display = 'none';
+      }
+    }
+
+    // ================= FUNCIONES BASE DE DATOS =================
+    async function cargarCategorias() {
+      const { data } = await supabase.from('categorias_gastos').select('*').order('nombre');
+      if(!data) return;
+      document.getElementById('cat').innerHTML = data.map(c => `<option value="${c.nombre}">${c.nombre}</option>`).join('');
+      document.getElementById('listaCatAdmin').innerHTML = data.map(c => `<li class="cat-item"><span>${c.nombre}</span><button type="button" class="btn-eliminar-cat" data-id="${c.id}" style="background:#fee2e2; border:none; color:red; padding:4px 8px; border-radius:4px; cursor:pointer;">Eliminar</button></li>`).join('');
+      
+      document.querySelectorAll('.btn-eliminar-cat').forEach(b => {
+        b.addEventListener('click', async (e) => {
+          if(confirm('¿Borrar?')) { await supabase.from('categorias_gastos').delete().eq('id', e.target.getAttribute('data-id')); cargarCategorias(); }
+        });
+      });
+    }
+
+    document.getElementById('formCat').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      await supabase.from('categorias_gastos').insert([{ nombre: document.getElementById('nuevaCat').value.trim() }]);
+      document.getElementById('nuevaCat').value = ''; cargarCategorias();
+    });
+
+    async function cargarDashboard() {
+      const { data: movs } = await supabase.from('flujo_hogar').select('*').order('fecha', { ascending: false });
+      if(!movs) return;
+
+      const mesActual = new Date().getMonth();
+      const movsMes = movs.filter(m => new Date(m.fecha).getMonth() === mesActual);
+
+      const ing = movs.filter(m=>m.tipo==='Ingreso'); const gas = movs.filter(m=>m.tipo==='Gasto');
+      document.getElementById('saldoDisponible').textContent = formatearMoneda(ing.reduce((a,b)=>a+Number(b.monto),0) - gas.reduce((a,b)=>a+Number(b.monto),0));
+
+      const ingMes = movsMes.filter(m=>m.tipo==='Ingreso').reduce((a,b)=>a+Number(b.monto),0);
+      const gasMes = movsMes.filter(m=>m.tipo==='Gasto').reduce((a,b)=>a+Number(b.monto),0);
+      document.getElementById('totalIngresos').textContent = formatearMoneda(ingMes);
+      document.getElementById('totalGastos').textContent = formatearMoneda(gasMes);
+
+      const alerta = document.getElementById('alertaTendencia');
+      if (ingMes > 0) {
+        const pct = (gasMes / ingMes) * 100;
+        if (pct > 85) { alerta.className = 'alert-banner bad'; alerta.innerHTML = `⚠️ Has gastado el ${Math.round(pct)}% del mes.`; } 
+        else if (pct < 60) { alerta.className = 'alert-banner good'; alerta.innerHTML = `🌟 Ahorro alto. Gastaste el ${Math.round(pct)}%.`; } 
+        else { alerta.style.display = 'none'; }
+      } else { alerta.style.display = 'none'; }
+
+      const gasCat = {}; const gasPers = {};
+      movsMes.filter(m=>m.tipo==='Gasto').forEach(m => { gasCat[m.categoria] = (gasCat[m.categoria] || 0) + Number(m.monto); gasPers[m.persona] = (gasPers[m.persona] || 0) + Number(m.monto); });
+
+      if (miGraficaCat) miGraficaCat.destroy();
+      miGraficaCat = new Chart(document.getElementById('graficaCategorias').getContext('2d'), { type: 'doughnut', data: { labels: Object.keys(gasCat), datasets: [{ data: Object.values(gasCat), backgroundColor: ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'] }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: {font:{size:10}} } } } });
+
+      if (miGraficaPers) miGraficaPers.destroy();
+      miGraficaPers = new Chart(document.getElementById('graficaPersonas').getContext('2d'), { type: 'pie', data: { labels: Object.keys(gasPers), datasets: [{ data: Object.values(gasPers), backgroundColor: ['#f43f5e', '#0ea5e9', '#14b8a6', '#f59e0b'] }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: {font:{size:10}} } } } });
+
+      document.getElementById('contenedorCuentas').innerHTML = ['Efectivo', 'Cuenta Bancaria', 'Billetera Digital'].map(cta => {
+        const s = ing.filter(m=>m.cuenta===cta).reduce((a,b)=>a+Number(b.monto),0) - gas.filter(m=>m.cuenta===cta).reduce((a,b)=>a+Number(b.monto),0);
+        return `<div class="account-pill"><div style="font-size:0.7rem; color:#1e40af; font-weight:600;">${cta}</div><div style="font-weight:bold; color:${s<0?'var(--danger)':'#1e3a8a'}">${formatearMoneda(s)}</div></div>`;
+      }).join('');
+
+      document.getElementById('listaMovimientos').innerHTML = movsMes.slice(0,10).map(m => {
+        const esI = m.tipo==='Ingreso';
+        return `<li class="mov-item ${m.tipo.toLowerCase()}"><div><span style="font-weight:600; font-size:0.95rem;">${m.descripcion}</span><span style="font-size:0.75rem; color:gray; display:block;">${esI?'Aporte':m.categoria} • <b>${m.persona}</b> • ${m.cuenta}</span></div><div style="text-align:right"><div style="font-weight:700; color:${esI?'var(--success)':'#111827'}">${esI?'+':'-'}${formatearMoneda(m.monto)}</div><button style="background:none; border:none; color:red; text-decoration:underline; cursor:pointer; font-size:0.75rem; padding:0; margin-top:4px;" class="btn-eliminar-mov" data-id="${m.id}">Eliminar</button></div></li>`;
+      }).join('');
+
+      document.querySelectorAll('.btn-eliminar-mov').forEach(b => {
+        b.addEventListener('click', async (e) => { if(confirm('¿Eliminar registro?')){ await supabase.from('flujo_hogar').delete().eq('id', e.target.getAttribute('data-id')); cargarDashboard(); } });
+      });
+    }
+
+    document.getElementById('formMovimiento').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const btn = document.getElementById('btnGuardar'); btn.disabled = true; btn.textContent = "Guardando...";
+      const s = JSON.parse(localStorage.getItem('app_hogar_sesion_activa'));
+      const t = document.getElementById('tipo').value;
+      
+      const {error} = await supabase.from('flujo_hogar').insert([{
+        tipo: t, monto: parseFloat(document.getElementById('monto').value), descripcion: document.getElementById('desc').value,
+        cuenta: document.getElementById('cuenta').value, categoria: t === 'Ingreso' ? 'Aporte' : document.getElementById('cat').value, persona: s.nombre
+      }]);
+      
+      if(error) alert(error.message);
+      document.getElementById('monto').value = ''; document.getElementById('desc').value = '';
+      cargarDashboard(); btn.disabled = false; btn.textContent = "Guardar";
+    });
+
+    verificarSesion();
+  </script>
+</body>
+</html>
