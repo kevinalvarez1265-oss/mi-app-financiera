@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Mercado en la Nube - Modo Supermercado</title>
+  <title>Mercado - Ejecución Real</title>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
@@ -14,7 +14,7 @@
     
     header { display: flex; justify-content: space-between; align-items: center; }
     header h1 { font-size: 1.4rem; color: #111827; }
-    .btn-nav { background: #e0ecfb; color: var(--primary); border: none; padding: 6px 12px; border-radius: 6px; font-size: 0.85rem; font-weight: 600; text-decoration: none; display: inline-flex; align-items: center;}
+    .btn-nav { background: #e0ecfb; color: var(--primary); border: none; padding: 6px 12px; border-radius: 6px; font-size: 0.85rem; font-weight: 600; text-decoration: none;}
     
     .card { background: var(--card-bg); border-radius: 12px; padding: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); border: 1px solid var(--border); }
     .card-title { font-size: 1.1rem; font-weight: 700; margin-bottom: 12px; }
@@ -25,101 +25,105 @@
     .execution-label { font-size: 0.7rem; color: gray; font-weight: bold; text-transform: uppercase;}
     .execution-value { font-weight: bold; font-size: 1.1rem;}
 
-    /* CALCULADORA RÁPIDA (MODO SUPERMERCADO) */
-    .supermarket-panel { border: 2px solid #166534; background: #f0fdf4; }
+    /* CALCULADORA RÁPIDA (PANEL FIJO) */
+    .supermarket-panel { border: 2px solid #166534; background: #f0fdf4; position: sticky; top: 10px; z-index: 100;}
     .supermarket-title { color: #166534; font-size: 1.1rem; font-weight: 800; display: flex; align-items: center; gap: 6px; margin-bottom: 12px;}
     .form-row { display: flex; gap: 8px; width: 100%; margin-bottom: 10px;}
     .form-row > div { flex: 1; display: flex; flex-direction: column; gap: 4px; }
     .form-row label { font-size: 0.8rem; font-weight: bold; color: #166534; }
-    .big-input { padding: 12px; font-size: 1.1rem; font-weight: bold; border-radius: 8px; border: 1px solid #86efac; outline: none; width: 100%;}
-    .big-btn { background: #166534; color: white; border: none; padding: 14px; border-radius: 8px; font-size: 1.1rem; font-weight: bold; cursor: pointer; width: 100%; transition: background 0.2s;}
-    .big-btn:active { background: #14532d; }
-
+    .big-input { padding: 10px; font-size: 1rem; font-weight: bold; border-radius: 8px; border: 1px solid #86efac; outline: none; width: 100%;}
+    .big-btn { background: #166534; color: white; border: none; padding: 12px; border-radius: 8px; font-size: 1rem; font-weight: bold; cursor: pointer; width: 100%; transition: background 0.2s;}
+    
+    /* LISTAS */
     .chart-container { position: relative; height: 180px; width: 100%; margin-bottom: 15px; }
     .item-list { list-style: none; display: flex; flex-direction: column; gap: 10px; }
-    .item, .checklist-item { background: #fff; border: 1px solid var(--border); border-radius: 8px; padding: 12px; }
+    .item { background: #fff; border: 1px solid var(--border); border-radius: 8px; padding: 12px; }
     .item-header { display: flex; justify-content: space-between; align-items: center; font-weight: 700; color: var(--primary); border-bottom: 1px dashed var(--border); padding-bottom: 6px; margin-bottom: 6px;}
+    
+    /* ITEMS DEL CARRITO (CHECKLIST) */
+    .checklist-item { display: flex; flex-direction: column; gap: 8px; border: 1px solid var(--border); border-radius: 8px; padding: 12px; background: #fff;}
+    .checklist-header { display: flex; justify-content: space-between; align-items: flex-start;}
+    .checklist-title { font-weight: 700; font-size: 1.05rem; color: #111827; }
+    .checklist-est { font-size: 0.8rem; color: gray; margin-top: 2px;}
+    
+    /* Estados de ejecución (Ahorro/Pérdida) */
+    .ejecucion-box { border-radius: 6px; padding: 8px; font-size: 0.85rem; display: flex; justify-content: space-between; align-items: center; margin-top: 6px;}
+    .box-pendiente { background: #f8fafc; border: 1px dashed #cbd5e1; }
+    .box-ahorro { background: #dcfce7; border: 1px solid #bbf7d0; color: #166534; font-weight: bold;}
+    .box-sobrecosto { background: #fee2e2; border: 1px solid #fecaca; color: #991b1b; font-weight: bold;}
+    
+    .btn-fast-load { background: #dbeafe; color: var(--primary); border: 1px solid #bfdbfe; padding: 6px 12px; border-radius: 6px; font-size: 0.8rem; font-weight: bold; cursor: pointer;}
+    .btn-remove { background: none; border: none; color: var(--danger); font-size: 1.2rem; cursor: pointer; padding:0 5px;}
     
     form { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px;}
     input, select, button { padding: 8px; border-radius: 6px; border: 1px solid var(--border); outline: none; }
     button.btn-primary { background: var(--primary); color: #fff; font-weight: 600; border: none; cursor: pointer; }
-    
     .history-row { display: flex; justify-content: space-between; align-items:center; padding: 8px; border-bottom: 1px solid #f3f4f6; font-size: 0.85rem; background: #f8fafc; margin-bottom:4px; border-radius:4px;}
-    
-    .checklist-item { display: flex; gap: 10px; align-items: center; border-left: 4px solid var(--primary);}
-    .checklist-item.inactivo { opacity: 0.5; border-left-color: #cbd5e1; }
-    .checkbox { width: 22px; height: 22px; cursor: pointer;}
-    .checklist-info { flex: 1; display: flex; flex-direction: column; gap: 2px;}
-    .btn-fast-load { background: #dbeafe; color: var(--primary); border: 1px solid #bfdbfe; padding: 6px 10px; border-radius: 6px; font-size: 0.8rem; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 4px; white-space: nowrap;}
-    .btn-remove { background: none; border: none; color: var(--danger); font-size: 1.2rem; cursor: pointer; padding:0; margin-left: 8px;}
-    .btn-delete-master { background: #fee2e2; border: 1px solid #fecaca; color: var(--danger); font-size: 0.75rem; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-weight: bold;}
   </style>
 </head>
 <body>
-  <div class="container" id="top-anchor">
+  <div class="container">
     <header>
-      <h1>Gestión de Mercado</h1>
+      <h1>Auditoría de Mercado</h1>
       <a href="./" class="btn-nav">💰 Presupuesto</a>
     </header>
 
-    <!-- 1. CALCULADORA RÁPIDA (PANEL FIJO SUPERIOR) -->
-    <section class="card supermarket-panel">
-      <div class="supermarket-title">⚡ Calculadora Rápida</div>
+    <!-- CALCULADORA RÁPIDA (FIJA) -->
+    <section class="card supermarket-panel" id="panelCalculadora">
+      <div class="supermarket-title">⚡ Registrar Compra Real</div>
       <form id="formCompraRapida" onsubmit="procesarCompraRapida(event)">
         <div style="margin-bottom: 10px;">
-          <label style="font-size: 0.8rem; font-weight: bold; color: #166534;">Producto a registrar:</label>
-          <select id="calc-item" class="big-input" required>
-            <option value="">-- Selecciona de la lista --</option>
+          <select id="calc-item" class="big-input" style="color:var(--primary);" required>
+            <option value="">-- Selecciona producto a registrar --</option>
           </select>
         </div>
         <div class="form-row">
           <div style="flex: 2;">
-            <label>Precio Real $</label>
-            <input type="number" id="calc-precio" class="big-input" placeholder="Ej: 4500" required>
+            <label>Tienda Física Hoy</label>
+            <input type="text" id="calc-tienda" class="big-input" placeholder="Ej: D1, Éxito" required>
+          </div>
+        </div>
+        <div class="form-row">
+          <div style="flex: 2;">
+            <label>Precio Real Unit. $</label>
+            <input type="number" id="calc-precio" class="big-input" placeholder="0" required>
           </div>
           <div style="flex: 1;">
-            <label>Cant.</label>
+            <label>Cant. Real</label>
             <input type="number" id="calc-cant" class="big-input" value="1" min="1" required>
           </div>
         </div>
-        <button type="submit" class="big-btn" id="btnProcesarCalc">✅ Añadir al Carrito Real</button>
+        <button type="submit" class="big-btn" id="btnProcesarCalc">✅ Guardar Ejecución</button>
       </form>
     </section>
 
-    <!-- 2. RESUMEN DE EJECUCIÓN -->
+    <!-- RESUMEN COMPARATIVO DEL VIAJE -->
     <section class="card">
-      <div class="card-title">Resumen de tu Viaje</div>
+      <div class="card-title">Resumen del Viaje Actual</div>
       <div class="execution-summary">
         <div class="execution-item">
-          <span class="execution-label">Estimado Faltante</span>
+          <span class="execution-label">Planeado (Total)</span>
           <span class="execution-value" style="color: var(--primary);" id="totalEstimado">$0</span>
         </div>
         <div class="execution-item" style="border-left: 1px solid var(--border); border-right: 1px solid var(--border);">
-          <span class="execution-label">Gasto Real Hoy</span>
+          <span class="execution-label">Ejecutado (Real)</span>
           <span class="execution-value" style="color: var(--text);" id="totalEjecutado">$0</span>
         </div>
         <div class="execution-item">
-          <span class="execution-label">Total del Viaje</span>
+          <span class="execution-label">Balance</span>
           <span class="execution-value" id="diferenciaGlobal">$0</span>
         </div>
       </div>
       <div class="chart-container"><canvas id="graficaComparativa"></canvas></div>
     </section>
 
-    <!-- 3. LISTA DE PENDIENTES SIMPLIFICADA -->
+    <!-- LISTA DE EJECUCIÓN (CARRITO) -->
     <section class="card">
-      <div class="card-title">🛒 Por Comprar (Pendientes)</div>
+      <div class="card-title">🛒 Mi Carrito (Contraste)</div>
       <ul class="item-list" id="contenedorChecklist"></ul>
     </section>
 
-    <!-- 4. HISTÓRICO REAL MENSUAL -->
-    <section class="card">
-      <div class="card-title">Gasto Real Mensual en Mercado</div>
-      <div class="chart-container" style="height: 200px;"><canvas id="graficaHistorico"></canvas></div>
-      <div id="listaHistoricoMensual" style="margin-top: 10px;"></div>
-    </section>
-
-    <!-- 5. CATÁLOGO MAESTRO -->
+    <!-- CATÁLOGO MAESTRO -->
     <section class="card">
       <div class="card-title">Catálogo Maestro</div>
       <form id="formNuevoProducto">
@@ -131,37 +135,29 @@
   </div>
 
   <script>
-    // ================= CONEXIÓN A SUPABASE =================
+    // ================= CONEXIÓN SUPABASE =================
     const SUPABASE_URL = "https://xqowrstjyzlyrczifmca.supabase.co";
     const SUPABASE_KEY = "sb_publishable_g0m2XAZRFxKXOfJh8ejKVg_FfsWXly-";
-    
     let clienteSupabase;
-    try {
-      clienteSupabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-    } catch (e) {
-      alert("Error iniciando Supabase en Mercado: " + e.message);
-    }
+    try { clienteSupabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY); } 
+    catch (e) { alert("Error iniciando Supabase: " + e.message); }
 
     if (!localStorage.getItem('app_hogar_sesion_activa')) { window.location.href = './'; }
     const formatearMoneda = (n) => new Intl.NumberFormat('es-CO', {style:'currency',currency:'COP',maximumFractionDigits:0}).format(n);
-    let chartMercado = null; let chartHistorico = null;
+    let chartMercado = null;
 
-    // --- FUNCIONES DEL CATÁLOGO ---
+    // --- FUNCIONES CATÁLOGO ---
     document.getElementById('formNuevoProducto').addEventListener('submit', async (e) => {
       e.preventDefault();
-      const n = document.getElementById('nombreProducto').value.trim();
-      await clienteSupabase.from('productos_mercado').insert([{ nombre: n }]);
+      await clienteSupabase.from('productos_mercado').insert([{ nombre: document.getElementById('nombreProducto').value.trim() }]);
       document.getElementById('nombreProducto').value = ''; renderApp();
     });
 
     async function eliminarProductoCatalogo(id) {
-      if(confirm('¿Eliminar producto de la base de datos? (Se borrará del carrito también)')) {
-        await clienteSupabase.from('productos_mercado').delete().eq('id', id);
-        renderApp();
-      }
+      if(confirm('¿Eliminar del catálogo y del carrito?')) { await clienteSupabase.from('productos_mercado').delete().eq('id', id); renderApp(); }
     }
 
-    async function guardarPrecio(id) {
+    async function guardarPrecioEstimado(id) {
       let t = document.getElementById(`tienda-${id}`).value.trim();
       t = t.charAt(0).toUpperCase() + t.slice(1).toLowerCase(); 
       const p = parseFloat(document.getElementById(`precio-${id}`).value);
@@ -172,184 +168,172 @@
       const i = hist.findIndex(h=>h.tienda===t);
       if(i>=0) hist[i].precio = p; else hist.push({tienda: t, precio: p});
       
-      await clienteSupabase.from('productos_mercado').update({ historial_precios: hist }).eq('id', id);
-      renderApp();
+      await clienteSupabase.from('productos_mercado').update({ historial_precios: hist }).eq('id', id); renderApp();
     }
 
-    function activarEdicion(id, t, p) { document.getElementById(`tienda-${id}`).value = t; document.getElementById(`precio-${id}`).value = p; document.getElementById(`precio-${id}`).focus(); }
-
-    // --- FUNCIONES DEL CARRITO ---
-    async function agregarALista(id) {
+    // --- FUNCIONES CARRITO ---
+    async function agregarPlaneado(id) {
       const { data: prods } = await clienteSupabase.from('productos_mercado').select('*').eq('id', id);
       const prod = prods[0];
       await clienteSupabase.from('checklist_mercado').insert([{ 
         producto_id: id, 
-        tienda_seleccionada: prod.historial_precios[0]?.tienda||"", 
-        precio_seleccionado: prod.historial_precios[0]?.precio||0,
-        cantidad: 1
+        tienda_estimada: prod.historial_precios[0]?.tienda||"", 
+        precio_estimado: prod.historial_precios[0]?.precio||0,
+        cantidad_estimada: 1,
+        activo: true, comprado: false
       }]);
       renderApp();
     }
 
-    async function toggleActivo(id, estadoActual) {
-      await clienteSupabase.from('checklist_mercado').update({ activo: !estadoActual }).eq('id', id); renderApp();
+    async function cambiarBaseEstimada(id, val) {
+      const [t, p] = val.split('|');
+      await clienteSupabase.from('checklist_mercado').update({ tienda_estimada: t, precio_estimado: parseFloat(p) }).eq('id', id);
+      renderApp();
     }
 
-    async function quitar(id) { await clienteSupabase.from('checklist_mercado').delete().eq('id', id); renderApp(); }
+    async function quitarDelCarrito(id) { 
+      if(confirm('¿Eliminar producto del viaje actual?')) { await clienteSupabase.from('checklist_mercado').delete().eq('id', id); renderApp(); }
+    }
 
-    // ================= MAGIA: MODO SUPERMERCADO =================
-    
-    // 1. Cargar datos a la calculadora al tocar el rayo ⚡
-    function cargarEnCalculadora(checklistId, nombreProducto, cantidadEstimada) {
-      const select = document.getElementById('calc-item');
-      select.value = checklistId;
-      document.getElementById('calc-cant').value = cantidadEstimada || 1;
+    // --- CALCULADORA (MODO SUPERMERCADO) ---
+    function cargarEnCalculadora(id_checklist, cant_planeada, tienda_planeada) {
+      document.getElementById('calc-item').value = id_checklist;
+      document.getElementById('calc-cant').value = cant_planeada || 1;
+      document.getElementById('calc-tienda').value = tienda_planeada || "";
       
-      // Auto-enfocar en el precio y desplazar hacia arriba
       window.scrollTo({ top: 0, behavior: 'smooth' });
-      const inputPrecio = document.getElementById('calc-precio');
-      inputPrecio.value = '';
-      inputPrecio.focus();
+      document.getElementById('calc-precio').focus();
     }
 
-    // 2. Procesar la compra desde la calculadora
     async function procesarCompraRapida(e) {
       e.preventDefault();
       const btn = document.getElementById('btnProcesarCalc');
       btn.disabled = true; btn.textContent = "Guardando...";
 
       const checklistId = document.getElementById('calc-item').value;
+      const tiendaReal = document.getElementById('calc-tienda').value.trim();
       const precioReal = parseFloat(document.getElementById('calc-precio').value);
       const cantReal = parseInt(document.getElementById('calc-cant').value);
 
-      if(!checklistId) {
-        alert("Por favor selecciona un producto de la lista.");
-        btn.disabled = false; btn.textContent = "✅ Añadir al Carrito Real";
-        return;
-      }
+      if(!checklistId) { alert("Selecciona un producto."); btn.disabled = false; btn.textContent = "✅ Guardar Ejecución"; return; }
 
-      try {
-        await clienteSupabase.from('checklist_mercado').update({ 
-          precio_seleccionado: precioReal, 
-          cantidad: cantReal,
-          comprado: true, 
-          fecha_compra: new Date().toISOString() 
-        }).eq('id', checklistId);
-        
-        // Limpiar Calculadora
-        document.getElementById('calc-item').value = "";
-        document.getElementById('calc-precio').value = "";
-        document.getElementById('calc-cant').value = "1";
-        
-        renderApp();
-      } catch (err) {
-        alert("Error al registrar: " + err.message);
-      }
+      await clienteSupabase.from('checklist_mercado').update({ 
+        tienda_real: tiendaReal,
+        precio_real: precioReal, 
+        cantidad_real: cantReal,
+        comprado: true, 
+        fecha_compra: new Date().toISOString() 
+      }).eq('id', checklistId);
       
-      btn.disabled = false; btn.textContent = "✅ Añadir al Carrito Real";
+      // Limpiar Formulario
+      document.getElementById('formCompraRapida').reset();
+      renderApp();
+      btn.disabled = false; btn.textContent = "✅ Guardar Ejecución";
     }
 
-    // ================= MOTOR DE RENDERIZADO =================
+    // --- RENDER PRINCIPAL ---
     async function renderApp() {
       const { data: catalogo } = await clienteSupabase.from('productos_mercado').select('*').order('id', {ascending:false});
       const { data: checkAll } = await clienteSupabase.from('checklist_mercado').select('*').order('id', {ascending:false});
       if(!catalogo || !checkAll) return;
 
-      const checkPend = checkAll.filter(i => !i.comprado);
-      const checkComp = checkAll.filter(i => i.comprado);
-
-      // --- ACTUALIZAR DESPLEGABLE DE LA CALCULADORA ---
+      let planeadoTotal = 0; let ejecutadoTotal = 0;
       const calcSelect = document.getElementById('calc-item');
-      calcSelect.innerHTML = '<option value="">-- Selecciona de la lista --</option>' + 
-        checkPend.filter(i => i.activo).map(i => {
-          const p = catalogo.find(x => x.id === i.producto_id);
-          return p ? `<option value="${i.id}">${p.nombre}</option>` : '';
-        }).join('');
+      let optionsHTML = '<option value="">-- Selecciona producto a registrar --</option>';
 
-      // --- CÁLCULOS DEL VIAJE ACTUAL ---
-      let presupuestoPendiente = 0; 
-      let gastoEjecutadoHoy = 0;
-      
-      checkPend.forEach(i => { if(i.activo) presupuestoPendiente += (i.precio_seleccionado * i.cantidad); });
-
-      const hoyStr = new Date().toLocaleDateString('es-CO');
-      checkComp.forEach(i => {
-        if (new Date(i.fecha_compra).toLocaleDateString('es-CO') === hoyStr) {
-          gastoEjecutadoHoy += (i.precio_seleccionado * i.cantidad);
-        }
-      });
-
-      const presupuestoTotalViaje = presupuestoPendiente + gastoEjecutadoHoy;
-      
-      document.getElementById('totalEstimado').textContent = formatearMoneda(presupuestoPendiente);
-      document.getElementById('totalEjecutado').textContent = formatearMoneda(gastoEjecutadoHoy);
-      document.getElementById('diferenciaGlobal').textContent = formatearMoneda(presupuestoTotalViaje);
-
-      // Gráfica Comparativa (Opciones Totales)
-      let totTienda = {};
-      checkPend.forEach(i => {
-        if(!i.activo) return;
+      // RENDERIZAR CARRITO Y CONTRASTES
+      document.getElementById('contenedorChecklist').innerHTML = checkAll.map(i => {
         const p = catalogo.find(x=>x.id===i.producto_id);
-        if(p) {
-          p.historial_precios.forEach(h => {
-            if(!totTienda[h.tienda]) totTienda[h.tienda] = 0;
-            totTienda[h.tienda] += (h.precio * i.cantidad);
-          });
-        }
-      });
+        if(!p) return '';
+        
+        // Sumatorias para el Resumen (Asumimos todo el carrito como 1 solo viaje/presupuesto)
+        const subtEstimado = (i.precio_estimado || 0) * (i.cantidad_estimada || 1);
+        planeadoTotal += subtEstimado;
 
+        if (!i.comprado) {
+          // AUN NO COMPRADO (PENDIENTE)
+          optionsHTML += `<option value="${i.id}">${p.nombre}</option>`;
+          let opts = p.historial_precios.map(h=>`<option value="${h.tienda}|${h.precio}" ${(h.tienda===i.tienda_estimada && h.precio===i.precio_estimado)?'selected':''}>${h.tienda} - ${formatearMoneda(h.precio)}</option>`).join('');
+          
+          return `
+          <li class="checklist-item">
+            <div class="checklist-header">
+              <div>
+                <div class="checklist-title">${p.nombre}</div>
+                <div class="checklist-est">Planeado: ${formatearMoneda(subtEstimado)} (${i.cantidad_estimada} unds)</div>
+              </div>
+              <button class="btn-remove" onclick="quitarDelCarrito(${i.id})">×</button>
+            </div>
+            <select style="width:100%; font-size:0.8rem; margin-top:4px;" onchange="cambiarBaseEstimada(${i.id}, this.value)">
+              ${opts||'<option value="0|0">Definir precio base...</option>'}
+            </select>
+            <div class="ejecucion-box box-pendiente">
+              <span>⏳ Esperando compra...</span>
+              <button class="btn-fast-load" onclick="cargarEnCalculadora(${i.id}, ${i.cantidad_estimada}, '${i.tienda_estimada}')">⚡ Ejecutar</button>
+            </div>
+          </li>`;
+        } else {
+          // COMPRADO (CONTRASTE REALIZADO)
+          const subtReal = (i.precio_real || 0) * (i.cantidad_real || 1);
+          ejecutadoTotal += subtReal;
+          const dif = subtEstimado - subtReal;
+          
+          let estadoClass, estadoText;
+          if (dif >= 0) { estadoClass = 'box-ahorro'; estadoText = `✅ Ahorro: +${formatearMoneda(dif)}`; } 
+          else { estadoClass = 'box-sobrecosto'; estadoText = `⚠️ Sobrecosto: ${formatearMoneda(dif)}`; }
+
+          return `
+          <li class="checklist-item" style="border-left-color: gray;">
+            <div class="checklist-header">
+              <div>
+                <div class="checklist-title" style="text-decoration: line-through; color:gray;">${p.nombre}</div>
+                <div class="checklist-est">Tienda Real: <b>${i.tienda_real}</b></div>
+              </div>
+              <button class="btn-remove" onclick="quitarDelCarrito(${i.id})">×</button>
+            </div>
+            <div style="font-size:0.85rem; color:#475569; display:flex; justify-content:space-between; margin-top:4px;">
+              <span>Estimado: ${formatearMoneda(subtEstimado)}</span>
+              <strong>Real: ${formatearMoneda(subtReal)}</strong>
+            </div>
+            <div class="ejecucion-box ${estadoClass}">
+              <span>${estadoText}</span>
+              <span style="font-size:0.75rem;">Reabrir ⚡</span>
+            </div>
+          </li>`;
+        }
+      }).join('') || '<p style="text-align:center; font-size:0.85rem; color:gray;">Carrito vacío.</p>';
+
+      calcSelect.innerHTML = optionsHTML;
+
+      // ACTUALIZAR RESUMEN GENERAL
+      document.getElementById('totalEstimado').textContent = formatearMoneda(planeadoTotal);
+      document.getElementById('totalEjecutado').textContent = formatearMoneda(ejecutadoTotal);
+      
+      const balanceGeneral = planeadoTotal - ejecutadoTotal;
+      const divBalance = document.getElementById('diferenciaGlobal');
+      if (ejecutadoTotal === 0) { divBalance.textContent = "$0"; divBalance.style.color = "gray"; }
+      else if (balanceGeneral >= 0) { divBalance.textContent = `+${formatearMoneda(balanceGeneral)}`; divBalance.style.color = "var(--success)"; }
+      else { divBalance.textContent = formatearMoneda(balanceGeneral); divBalance.style.color = "var(--danger)"; }
+
+      // GRAFICA COMPARATIVA GLOBAL
       const ctx = document.getElementById('graficaComparativa').getContext('2d');
       if(chartMercado) chartMercado.destroy();
       chartMercado = new Chart(ctx, {
         type: 'bar',
-        data: { labels: ['Pendiente Actual', ...Object.keys(totTienda)], datasets: [{ label: 'Costo', data: [presupuestoPendiente, ...Object.values(totTienda)], backgroundColor: ['#0066ff', ...Object.keys(totTienda).map(()=>'#cbd5e1')], borderRadius: 4 }] },
-        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
+        data: { labels: ['Planeado vs Real'], datasets: [
+          { label: 'Presupuesto Planeado', data: [planeadoTotal], backgroundColor: '#0066ff', borderRadius: 4 },
+          { label: 'Gasto Ejecutado', data: [ejecutadoTotal], backgroundColor: (balanceGeneral >= 0) ? '#10b981' : '#ef4444', borderRadius: 4 }
+        ]},
+        options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } } }
       });
 
-      // --- RENDERIZAR LISTA DE PENDIENTES (SIMPLIFICADA) ---
-      document.getElementById('contenedorChecklist').innerHTML = checkPend.map(i => {
-        const p = catalogo.find(x=>x.id===i.producto_id);
-        if(!p) return '';
-        
-        return `
-        <li class="checklist-item ${!i.activo?'inactivo':''}">
-          <input type="checkbox" class="checkbox" ${i.activo?'checked':''} onclick="toggleActivo(${i.id}, ${i.activo})">
-          <div class="checklist-info">
-            <span style="font-weight:700; font-size:1.05rem; color: var(--text);">${p.nombre}</span>
-            <span style="font-size:0.75rem; color: gray;">Est: ${formatearMoneda(i.precio_seleccionado)} x ${i.cantidad}</span>
-          </div>
-          <button class="btn-fast-load" onclick="cargarEnCalculadora(${i.id}, '${p.nombre}', ${i.cantidad})" ${!i.activo?'disabled':''}>⚡ Cargar</button>
-          <button class="btn-remove" onclick="quitar(${i.id})">×</button>
-        </li>`;
-      }).join('') || '<p style="text-align:center; font-size:0.85rem; color:gray; padding: 10px 0;">Carrito vacío.</p>';
-
-      // --- HISTÓRICO REAL MENSUAL ---
-      const histPorMes = {};
-      checkComp.forEach(i => {
-        const mesAnio = new Date(i.fecha_compra).toLocaleDateString('es-CO', { month: 'short', year: 'numeric' }).toUpperCase();
-        if(!histPorMes[mesAnio]) histPorMes[mesAnio] = 0;
-        histPorMes[mesAnio] += (i.precio_seleccionado * i.cantidad);
-      });
-
-      const ctxHist = document.getElementById('graficaHistorico').getContext('2d');
-      if(chartHistorico) chartHistorico.destroy();
-      chartHistorico = new Chart(ctxHist, {
-        type: 'line', 
-        data: { labels: Object.keys(histPorMes), datasets: [{ label: 'Gasto Ejecutado', data: Object.values(histPorMes), borderColor: '#10b981', backgroundColor: 'rgba(16, 185, 129, 0.2)', fill: true, tension: 0.3, pointRadius: 5 }] },
-        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
-      });
-
-      document.getElementById('listaHistoricoMensual').innerHTML = Object.keys(histPorMes).length > 0 
-        ? Object.keys(histPorMes).map(m => `<div class="history-row"><span>${m}</span><strong style="color:var(--success); font-size:1.1rem;">${formatearMoneda(histPorMes[m])}</strong></div>`).join('')
-        : '<p style="text-align:center; font-size:0.8rem; color:gray;">Aún no hay compras en el histórico.</p>';
-
-      // --- CATÁLOGO MAESTRO ---
+      // RENDER CATÁLOGO MAESTRO (Permanece igual)
       document.getElementById('contenedorCatalogo').innerHTML = catalogo.map(p => `
         <li class="item">
           <div class="item-header"><span>${p.nombre}</span><button class="btn-delete-master" onclick="eliminarProductoCatalogo(${p.id})">🗑️ Borrar</button></div>
-          <div>${(p.historial_precios||[]).map(h=>`<div class="history-row"><span>${h.tienda}</span><div><strong>${formatearMoneda(h.precio)}</strong><button class="btn-edit" onclick="activarEdicion(${p.id}, '${h.tienda}', ${h.precio})">✏️</button></div></div>`).join('')}</div>
-          <div style="display:flex; gap:6px; margin-top:10px;"><input type="text" id="tienda-${p.id}" placeholder="Nueva Tienda (Ej. D1)" style="flex:1; padding:8px; border-radius:6px; border:1px solid #e5e7eb;"><input type="number" id="precio-${p.id}" placeholder="Precio Unit." style="width:100px; padding:8px; border-radius:6px; border:1px solid #e5e7eb;"><button type="button" class="btn-primary" onclick="guardarPrecio(${p.id})">Fijar Precio Base</button></div>
-          <button type="button" onclick="agregarALista(${p.id})" style="width:100%; margin-top:8px; background:#e0ecfb; color:var(--primary); font-weight:bold; border:none; padding:8px; border-radius:6px; cursor:pointer;">Añadir al Carrito Actual</button>
+          <div>${(p.historial_precios||[]).map(h=>`<div class="history-row"><span>${h.tienda}</span><div><strong>${formatearMoneda(h.precio)}</strong></div></div>`).join('')}</div>
+          <div style="display:flex; gap:6px; margin-top:10px;"><input type="text" id="tienda-${p.id}" placeholder="Tienda (Ej. D1)" style="flex:1; padding:8px; border-radius:6px; border:1px solid #e5e7eb;"><input type="number" id="precio-${p.id}" placeholder="Precio Est." style="width:100px; padding:8px; border-radius:6px; border:1px solid #e5e7eb;"><button type="button" class="btn-primary" onclick="guardarPrecioEstimado(${p.id})">Guardar</button></div>
+          <button type="button" onclick="agregarPlaneado(${p.id})" style="width:100%; margin-top:8px; background:#e0ecfb; color:var(--primary); font-weight:bold; border:none; padding:8px; border-radius:6px; cursor:pointer;">🛒 Añadir a Mi Carrito</button>
         </li>
       `).join('');
     }
