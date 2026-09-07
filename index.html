@@ -3,9 +3,13 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Dashboard Analítico - Depuración</title>
+  <title>Dashboard Analítico - Nube</title>
+  
+  <!-- SDK de Supabase -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <!-- Chart.js -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  
   <style>
     :root { --bg: #f3f4f6; --card-bg: #ffffff; --primary: #0066ff; --text: #1f2937; --border: #e5e7eb; --success: #10b981; --danger: #ef4444; }
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, sans-serif; }
@@ -59,7 +63,7 @@
 </head>
 <body>
 
-  <!-- VISTA DE LOGIN CON DETECCIÓN DE ERRORES EXTREMA -->
+  <!-- AUTENTICACIÓN -->
   <div id="auth-view">
     <div class="form-box">
       <form class="auth-form" id="formAutenticacion">
@@ -137,26 +141,20 @@
   </div>
 
   <script>
-    console.log("Iniciando aplicación...");
-
-    let supabase;
-    try {
-      const SUPABASE_URL = "https://xqowrstjyzlyrczifmca.supabase.co";
-      const SUPABASE_KEY = "sb_publishable_g0m2XAZRFxKXOfJh8ejKVg_FfsWXly-";
-      supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-      console.log("Supabase inicializado correctamente.");
-    } catch (e) {
-      alert("Error crítico iniciando Supabase. Revisa las claves: " + e.message);
-    }
+    // ================= SOLUCIÓN DE CONFLICTO DE VARIABLES =================
+    const SUPABASE_URL = "https://xqowrstjyzlyrczifmca.supabase.co";
+    const SUPABASE_KEY = "sb_publishable_g0m2XAZRFxKXOfJh8ejKVg_FfsWXly-";
+    
+    // Cambiamos el nombre de la variable para evitar el error "has already been declared"
+    const clienteSupabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
     const formatearMoneda = (n) => new Intl.NumberFormat('es-CO', {style:'currency',currency:'COP',maximumFractionDigits:0}).format(n);
     let modoRegistro = true;
     let miGraficaCat = null;
     let miGraficaPers = null;
 
-    // EVENTOS UI MODERNOS (addEventListeners)
+    // EVENTOS UI
     document.getElementById('btnAlternar').addEventListener('click', () => {
-      console.log("Alternando modo...");
       modoRegistro = !modoRegistro;
       document.getElementById('tituloAuth').textContent = modoRegistro ? 'Registrarse' : 'Iniciar Sesión';
       document.getElementById('inputNombre').style.display = modoRegistro ? 'block' : 'none';
@@ -177,14 +175,12 @@
     });
 
     function mostrarError(msg) { 
-      console.error(msg);
       const err = document.getElementById('authError'); 
       err.textContent = msg; 
       err.style.display = 'block'; 
     }
 
     function iniciarSesionLocal(u) { 
-      console.log("Iniciando sesión con usuario:", u.nombre);
       localStorage.setItem('app_hogar_sesion_activa', JSON.stringify(u)); 
       verificarSesion(); 
     }
@@ -204,86 +200,56 @@
       }
     }
 
-    // ================= EL EVENTO DE AUTENTICACIÓN A PRUEBA DE BALAS =================
-    document.getElementById('formAutenticacion').addEventListener('submit', function(e) {
-      e.preventDefault(); // Detiene la recarga
-      console.log("Formulario enviado. Evitando recarga de página.");
+    // ================= LÓGICA DE LOGIN / REGISTRO =================
+    document.getElementById('formAutenticacion').addEventListener('submit', async function(e) {
+      e.preventDefault(); 
       
       const btn = document.getElementById('btnAuthSubmit');
       btn.disabled = true; 
-      btn.textContent = "Validando...";
+      btn.textContent = "Conectando...";
       
       const email = document.getElementById('inputEmail').value.trim().toLowerCase();
       const password = document.getElementById('inputPassword').value.trim();
       const nombre = document.getElementById('inputNombre').value.trim();
 
-      alert("Paso 1: Datos capturados. Enviando a Supabase...");
-
-      if (modoRegistro) {
-        // REGISTRO
-        supabase.from('usuarios_hogar').select('*').eq('email', email)
-          .then(res => {
-            if (res.error) {
-              alert("Error comprobando correo: " + res.error.message);
-              throw new Error(res.error.message);
-            }
-            if (res.data && res.data.length > 0) {
-              alert("Paso 2: El correo ya existe.");
-              mostrarError("El correo ya está registrado.");
-              btn.disabled = false; btn.textContent = "Continuar";
-              return null; // Detiene la ejecución
-            }
-            
-            alert("Paso 2: Correo libre. Creando usuario...");
-            return supabase.from('usuarios_hogar').insert([{ nombre: nombre, email: email, password: password }]).select();
-          })
-          .then(res => {
-            if (!res) return; // Se detuvo arriba
-            if (res.error) {
-               alert("Error creando usuario: " + res.error.message);
-               throw new Error(res.error.message);
-            }
-            alert("Paso 3: Usuario creado con éxito. Entrando...");
-            iniciarSesionLocal(res.data[0]);
+      try {
+        if (modoRegistro) {
+          // REGISTRO
+          const { data: ext, error: errExt } = await clienteSupabase.from('usuarios_hogar').select('*').eq('email', email);
+          
+          if (errExt) throw errExt;
+          if (ext && ext.length > 0) {
+            mostrarError("El correo ya está registrado. Haz clic en 'Inicia Sesión'.");
             btn.disabled = false; btn.textContent = "Continuar";
-          })
-          .catch(err => {
-            console.error("Fallo general en registro:", err);
-            mostrarError("Fallo interno: " + err.message);
+            return;
+          }
+          
+          const { data, error } = await clienteSupabase.from('usuarios_hogar').insert([{ nombre, email, password }]).select();
+          if (error) throw error;
+          
+          iniciarSesionLocal(data[0]);
+        } else {
+          // LOGIN
+          const { data, error } = await clienteSupabase.from('usuarios_hogar').select('*').eq('email', email).eq('password', password);
+          if (error) throw error;
+          if (data.length === 0) {
+            mostrarError("Correo o contraseña incorrectos.");
             btn.disabled = false; btn.textContent = "Continuar";
-          });
-
-      } else {
-        // LOGIN
-        alert("Paso 1: Buscando usuario para Login...");
-        supabase.from('usuarios_hogar').select('*').eq('email', email).eq('password', password)
-          .then(res => {
-             if (res.error) {
-               alert("Error buscando credenciales: " + res.error.message);
-               throw new Error(res.error.message);
-             }
-             if (res.data.length === 0) {
-                alert("Paso 2: Credenciales incorrectas.");
-                mostrarError("Correo o contraseña incorrectos.");
-                btn.disabled = false; btn.textContent = "Continuar";
-                return;
-             }
-             alert("Paso 2: Login exitoso. Entrando...");
-             iniciarSesionLocal(res.data[0]);
-             btn.disabled = false; btn.textContent = "Continuar";
-          })
-          .catch(err => {
-             console.error("Fallo general en login:", err);
-             mostrarError("Fallo interno: " + err.message);
-             btn.disabled = false; btn.textContent = "Continuar";
-          });
+            return;
+          }
+          iniciarSesionLocal(data[0]);
+        }
+      } catch (error) {
+        mostrarError("Hubo un error comunicándose con la base de datos: " + error.message);
       }
+      
+      btn.disabled = false; btn.textContent = "Continuar";
     });
 
     // ================= FUNCIONES BASE DE DATOS (DASHBOARD) =================
     async function cargarCategorias() {
       try {
-        const { data } = await supabase.from('categorias_gastos').select('*').order('nombre');
+        const { data } = await clienteSupabase.from('categorias_gastos').select('*').order('nombre');
         if(!data) return;
         document.getElementById('cat').innerHTML = data.map(c => `<option value="${c.nombre}">${c.nombre}</option>`).join('');
         
@@ -292,7 +258,10 @@
         
         document.querySelectorAll('.btn-eliminar-cat').forEach(b => {
           b.addEventListener('click', async (e) => {
-            if(confirm('¿Borrar?')) { await supabase.from('categorias_gastos').delete().eq('id', e.target.getAttribute('data-id')); cargarCategorias(); }
+            if(confirm('¿Borrar?')) { 
+              await clienteSupabase.from('categorias_gastos').delete().eq('id', e.target.getAttribute('data-id')); 
+              cargarCategorias(); 
+            }
           });
         });
       } catch (error) { console.error(error); }
@@ -302,7 +271,7 @@
       e.preventDefault();
       try {
         const nueva = document.getElementById('nuevaCat').value.trim();
-        await supabase.from('categorias_gastos').insert([{ nombre: nueva }]);
+        await clienteSupabase.from('categorias_gastos').insert([{ nombre: nueva }]);
         document.getElementById('nuevaCat').value = ''; 
         cargarCategorias();
       } catch(err) { alert(err.message); }
@@ -310,7 +279,7 @@
 
     async function cargarDashboard() {
       try {
-        const { data: movs } = await supabase.from('flujo_hogar').select('*').order('fecha', { ascending: false });
+        const { data: movs } = await clienteSupabase.from('flujo_hogar').select('*').order('fecha', { ascending: false });
         if(!movs) return;
 
         const mesActual = new Date().getMonth();
@@ -352,7 +321,12 @@
         }).join('');
 
         document.querySelectorAll('.btn-eliminar-mov').forEach(b => {
-          b.addEventListener('click', async (e) => { if(confirm('¿Eliminar registro?')){ await supabase.from('flujo_hogar').delete().eq('id', e.target.getAttribute('data-id')); cargarDashboard(); } });
+          b.addEventListener('click', async (e) => { 
+            if(confirm('¿Eliminar registro?')){ 
+              await clienteSupabase.from('flujo_hogar').delete().eq('id', e.target.getAttribute('data-id')); 
+              cargarDashboard(); 
+            } 
+          });
         });
 
       } catch(err) { console.error(err); }
@@ -365,7 +339,7 @@
       const t = document.getElementById('tipo').value;
       
       try {
-        const {error} = await supabase.from('flujo_hogar').insert([{
+        const {error} = await clienteSupabase.from('flujo_hogar').insert([{
           tipo: t, monto: parseFloat(document.getElementById('monto').value), descripcion: document.getElementById('desc').value,
           cuenta: document.getElementById('cuenta').value, categoria: t === 'Ingreso' ? 'Aporte' : document.getElementById('cat').value, persona: s.nombre
         }]);
