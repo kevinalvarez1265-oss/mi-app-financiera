@@ -53,7 +53,8 @@
   <div class="container">
     <header>
       <h1>Gestión de Mercado</h1>
-      <a href="presupuesto.html" class="btn-nav">💰 Presupuesto</a>
+      <!-- AQUÍ ESTÁ LA CORRECCIÓN CLAVE: APUNTA A index.html -->
+      <a href="index.html" class="btn-nav">💰 Presupuesto</a>
     </header>
 
     <section class="card">
@@ -85,25 +86,31 @@
   </div>
 
   <script>
-    // 🔴 PEGA TUS CLAVES AQUÍ
+    // ================= SOLUCIÓN DE CONFLICTO DE VARIABLES =================
     const SUPABASE_URL = "https://xqowrstjyzlyrczifmca.supabase.co";
     const SUPABASE_KEY = "sb_publishable_g0m2XAZRFxKXOfJh8ejKVg_FfsWXly-";
-    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    
+    let clienteSupabase;
+    try {
+      clienteSupabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    } catch (e) {
+      alert("Error iniciando Supabase en Mercado: " + e.message);
+    }
 
-    if (!localStorage.getItem('app_hogar_sesion_activa')) { window.location.href = 'presupuesto.html'; }
+    if (!localStorage.getItem('app_hogar_sesion_activa')) { window.location.href = 'index.html'; }
     const formatearMoneda = (n) => new Intl.NumberFormat('es-CO', {style:'currency',currency:'COP',maximumFractionDigits:0}).format(n);
     let chartMercado = null; let chartHistorico = null;
 
     document.getElementById('formNuevoProducto').addEventListener('submit', async (e) => {
       e.preventDefault();
       const n = document.getElementById('nombreProducto').value.trim();
-      await supabase.from('productos_mercado').insert([{ nombre: n }]);
+      await clienteSupabase.from('productos_mercado').insert([{ nombre: n }]);
       document.getElementById('nombreProducto').value = ''; renderApp();
     });
 
     async function eliminarProductoCatalogo(id) {
       if(confirm('¿Eliminar producto de la base de datos? (Se borrará del carrito también)')) {
-        await supabase.from('productos_mercado').delete().eq('id', id);
+        await clienteSupabase.from('productos_mercado').delete().eq('id', id);
         renderApp();
       }
     }
@@ -114,21 +121,21 @@
       const p = parseFloat(document.getElementById(`precio-${id}`).value);
       if(!t || isNaN(p)) return;
 
-      const { data: prod } = await supabase.from('productos_mercado').select('historial_precios').eq('id', id).single();
+      const { data: prod } = await clienteSupabase.from('productos_mercado').select('historial_precios').eq('id', id).single();
       let hist = prod.historial_precios || [];
       const i = hist.findIndex(h=>h.tienda===t);
       if(i>=0) hist[i].precio = p; else hist.push({tienda: t, precio: p});
       
-      await supabase.from('productos_mercado').update({ historial_precios: hist }).eq('id', id);
+      await clienteSupabase.from('productos_mercado').update({ historial_precios: hist }).eq('id', id);
       renderApp();
     }
 
     function activarEdicion(id, t, p) { document.getElementById(`tienda-${id}`).value = t; document.getElementById(`precio-${id}`).value = p; document.getElementById(`precio-${id}`).focus(); }
 
     async function agregarALista(id) {
-      const { data: prods } = await supabase.from('productos_mercado').select('*').eq('id', id);
+      const { data: prods } = await clienteSupabase.from('productos_mercado').select('*').eq('id', id);
       const prod = prods[0];
-      await supabase.from('checklist_mercado').insert([{ 
+      await clienteSupabase.from('checklist_mercado').insert([{ 
         producto_id: id, 
         tienda_seleccionada: prod.historial_precios[0]?.tienda||"", 
         precio_seleccionado: prod.historial_precios[0]?.precio||0 
@@ -138,29 +145,29 @@
 
     async function cambiarTienda(id, val) {
       const [t, p] = val.split('|');
-      await supabase.from('checklist_mercado').update({ tienda_seleccionada: t, precio_seleccionado: parseFloat(p) }).eq('id', id);
+      await clienteSupabase.from('checklist_mercado').update({ tienda_seleccionada: t, precio_seleccionado: parseFloat(p) }).eq('id', id);
       renderApp();
     }
 
     async function cambiarCantidad(id, val) {
-      await supabase.from('checklist_mercado').update({ cantidad: parseInt(val)||1 }).eq('id', id); renderApp(); 
+      await clienteSupabase.from('checklist_mercado').update({ cantidad: parseInt(val)||1 }).eq('id', id); renderApp(); 
     }
 
     async function toggleActivo(id, estadoActual) {
-      await supabase.from('checklist_mercado').update({ activo: !estadoActual }).eq('id', id); renderApp();
+      await clienteSupabase.from('checklist_mercado').update({ activo: !estadoActual }).eq('id', id); renderApp();
     }
 
     async function registrarCompra(id, precioSel) {
       if(precioSel <= 0) return alert("Asigna un precio válido antes de comprar.");
-      await supabase.from('checklist_mercado').update({ comprado: true, fecha_compra: new Date().toISOString() }).eq('id', id);
+      await clienteSupabase.from('checklist_mercado').update({ comprado: true, fecha_compra: new Date().toISOString() }).eq('id', id);
       renderApp();
     }
     
-    async function quitar(id) { await supabase.from('checklist_mercado').delete().eq('id', id); renderApp(); }
+    async function quitar(id) { await clienteSupabase.from('checklist_mercado').delete().eq('id', id); renderApp(); }
 
     async function renderApp() {
-      const { data: catalogo } = await supabase.from('productos_mercado').select('*').order('id', {ascending:false});
-      const { data: checkAll } = await supabase.from('checklist_mercado').select('*').order('id', {ascending:false});
+      const { data: catalogo } = await clienteSupabase.from('productos_mercado').select('*').order('id', {ascending:false});
+      const { data: checkAll } = await clienteSupabase.from('checklist_mercado').select('*').order('id', {ascending:false});
       if(!catalogo || !checkAll) return;
 
       const checkPend = checkAll.filter(i => !i.comprado);
