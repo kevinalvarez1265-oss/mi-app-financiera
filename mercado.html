@@ -97,7 +97,7 @@
       alert("Error iniciando Supabase en Mercado: " + e.message);
     }
 
-    if (!localStorage.getItem('app_hogar_sesion_activa')) { window.location.href = 'index.html'; }
+    if (!localStorage.getItem('app_hogar_sesion_activa')) { window.location.href = './'; }
     const formatearMoneda = (n) => new Intl.NumberFormat('es-CO', {style:'currency',currency:'COP',maximumFractionDigits:0}).format(n);
     let chartMercado = null; let chartHistorico = null;
 
