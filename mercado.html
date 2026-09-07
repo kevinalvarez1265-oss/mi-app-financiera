@@ -3,11 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Mercado en la Nube</title>
+  <title>Mercado en la Nube con Calculadora</title>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
-    :root { --bg: #f3f4f6; --card-bg: #ffffff; --primary: #0066ff; --text: #1f2937; --border: #e5e7eb; --success: #10b981; --danger: #ef4444; }
+    :root { --bg: #f3f4f6; --card-bg: #ffffff; --primary: #0066ff; --text: #1f2937; --border: #e5e7eb; --success: #10b981; --danger: #ef4444; --warning: #f59e0b;}
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, sans-serif; }
     body { background-color: var(--bg); color: var(--text); padding: 20px 12px; }
     .container { max-width: 650px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px; }
@@ -24,6 +24,12 @@
     .budget-amount { font-size: 2.2rem; font-weight: 800; color: #1e3a8a; margin-top: 4px; }
     .saving-badge { background: #dcfce7; color: #166534; padding: 4px 8px; border-radius: 12px; font-size: 0.8rem; font-weight: bold; display: inline-block; margin-top: 5px; }
 
+    /* Estilos para el resumen de ejecución en tiempo real */
+    .execution-summary { display: flex; justify-content: space-between; background: #f8fafc; border: 1px solid var(--border); border-radius: 8px; padding: 10px; margin-bottom: 15px; font-size: 0.9rem;}
+    .execution-item { display: flex; flex-direction: column; align-items: center; flex: 1;}
+    .execution-label { font-size: 0.75rem; color: gray; font-weight: bold; text-transform: uppercase;}
+    .execution-value { font-weight: bold; font-size: 1.1rem;}
+
     .chart-container { position: relative; height: 180px; width: 100%; margin-bottom: 15px; }
     .item-list { list-style: none; display: flex; flex-direction: column; gap: 10px; }
     .item, .checklist-item { background: #fff; border: 1px solid var(--border); border-radius: 8px; padding: 12px; }
@@ -36,36 +42,59 @@
     .history-row { display: flex; justify-content: space-between; align-items:center; padding: 8px; border-bottom: 1px solid #f3f4f6; font-size: 0.85rem; background: #f8fafc; margin-bottom:4px; border-radius:4px;}
     .btn-edit { background: none; border: none; color: var(--primary); cursor: pointer; font-size: 1rem; padding: 0 4px; }
     
+    /* Estilos del Carrito y Calculadora Rápida */
     .checklist-item { display: flex; gap: 10px; align-items: flex-start; transition: opacity 0.2s; border-left: 4px solid var(--primary);}
     .checklist-item.inactivo { opacity: 0.6; background: #f8fafc; border-left-color: #cbd5e1;}
     .checkbox { width: 22px; height: 22px; margin-top: 2px; cursor: pointer;}
-    .checklist-info { flex: 1; display: flex; flex-direction: column; gap: 4px;}
+    .checklist-info { flex: 1; display: flex; flex-direction: column; gap: 6px;}
+    
+    /* Panel de Calculadora de Ejecución */
+    .calc-panel { background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 6px; padding: 10px; margin-top: 4px; display: flex; flex-direction: column; gap: 8px;}
+    .calc-row { display: flex; gap: 8px; align-items: center;}
+    .calc-input { width: 100%; border: 1px solid #86efac; padding: 6px; border-radius: 4px; font-weight: bold;}
     .qty-box { display: flex; align-items: center; gap: 4px; }
-    .input-qty { width: 50px; padding: 2px; text-align: center; font-weight: bold; }
+    .input-qty { width: 50px; padding: 4px; text-align: center; font-weight: bold; border: 1px solid var(--border); border-radius: 4px;}
+    
     .select-tienda { width: 100%; background: #f8fafc; font-size: 0.85rem;}
+    .estimado-text { font-size: 0.75rem; color: gray; margin-bottom: -4px;}
     
     .btn-remove { background: none; border: none; color: var(--danger); font-size: 1.2rem; cursor: pointer; padding:0; }
-    .btn-buy { background: var(--success); color: white; border: none; padding: 6px 10px; border-radius: 6px; font-size: 0.8rem; font-weight: bold; cursor: pointer; width: 100%; margin-top: 6px;}
+    .btn-buy { background: var(--success); color: white; border: none; padding: 8px 10px; border-radius: 6px; font-size: 0.85rem; font-weight: bold; cursor: pointer; width: 100%; margin-top: 4px;}
     .btn-delete-master { background: #fee2e2; border: 1px solid #fecaca; color: var(--danger); font-size: 0.75rem; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-weight: bold;}
+    
+    .diferencia-text { font-size: 0.8rem; font-weight: bold; text-align: right;}
+    .ahorro { color: var(--success); }
+    .sobrecosto { color: var(--danger); }
   </style>
 </head>
 <body>
   <div class="container">
     <header>
       <h1>Gestión de Mercado</h1>
-      <!-- AQUÍ ESTÁ LA CORRECCIÓN CLAVE: APUNTA A index.html -->
       <a href="./" class="btn-nav">💰 Presupuesto</a>
     </header>
 
     <section class="card">
-      <div class="card-title">Cotización (Viaje Actual)</div>
-      <div class="budget-box">
-        <div class="budget-title">Presupuesto Elegido (Pendiente)</div>
-        <div class="budget-amount" id="presupuestoMixto">$0</div>
-        <div id="etiquetaAhorro"></div>
+      <div class="card-title">Cotización & Ejecución (Viaje Actual)</div>
+      
+      <!-- Resumen Comparativo General -->
+      <div class="execution-summary">
+        <div class="execution-item">
+          <span class="execution-label">Presupuestado</span>
+          <span class="execution-value" style="color: var(--primary);" id="totalEstimado">$0</span>
+        </div>
+        <div class="execution-item" style="border-left: 1px solid var(--border); border-right: 1px solid var(--border);">
+          <span class="execution-label">Gastado (Real)</span>
+          <span class="execution-value" style="color: var(--text);" id="totalEjecutado">$0</span>
+        </div>
+        <div class="execution-item">
+          <span class="execution-label">Diferencia</span>
+          <span class="execution-value" id="diferenciaGlobal">$0</span>
+        </div>
       </div>
+
       <div class="chart-container"><canvas id="graficaComparativa"></canvas></div>
-      <div class="card-title" style="margin-top:20px;">Mi Carrito (Por Comprar)</div>
+      <div class="card-title" style="margin-top:20px;">Mi Carrito (Calculadora de Compras)</div>
       <ul class="item-list" id="contenedorChecklist"></ul>
     </section>
 
@@ -86,7 +115,6 @@
   </div>
 
   <script>
-    // ================= SOLUCIÓN DE CONFLICTO DE VARIABLES =================
     const SUPABASE_URL = "https://xqowrstjyzlyrczifmca.supabase.co";
     const SUPABASE_KEY = "sb_publishable_g0m2XAZRFxKXOfJh8ejKVg_FfsWXly-";
     
@@ -101,6 +129,7 @@
     const formatearMoneda = (n) => new Intl.NumberFormat('es-CO', {style:'currency',currency:'COP',maximumFractionDigits:0}).format(n);
     let chartMercado = null; let chartHistorico = null;
 
+    // --- FUNCIONES DEL CATÁLOGO MAESTRO ---
     document.getElementById('formNuevoProducto').addEventListener('submit', async (e) => {
       e.preventDefault();
       const n = document.getElementById('nombreProducto').value.trim();
@@ -132,39 +161,74 @@
 
     function activarEdicion(id, t, p) { document.getElementById(`tienda-${id}`).value = t; document.getElementById(`precio-${id}`).value = p; document.getElementById(`precio-${id}`).focus(); }
 
+    // --- FUNCIONES DEL CARRITO (CHECKLIST) ---
     async function agregarALista(id) {
       const { data: prods } = await clienteSupabase.from('productos_mercado').select('*').eq('id', id);
       const prod = prods[0];
       await clienteSupabase.from('checklist_mercado').insert([{ 
         producto_id: id, 
         tienda_seleccionada: prod.historial_precios[0]?.tienda||"", 
-        precio_seleccionado: prod.historial_precios[0]?.precio||0 
+        precio_seleccionado: prod.historial_precios[0]?.precio||0,
+        cantidad: 1
       }]);
       renderApp();
     }
 
-    async function cambiarTienda(id, val) {
+    async function cambiarTiendaEstimada(id, val) {
       const [t, p] = val.split('|');
       await clienteSupabase.from('checklist_mercado').update({ tienda_seleccionada: t, precio_seleccionado: parseFloat(p) }).eq('id', id);
       renderApp();
-    }
-
-    async function cambiarCantidad(id, val) {
-      await clienteSupabase.from('checklist_mercado').update({ cantidad: parseInt(val)||1 }).eq('id', id); renderApp(); 
     }
 
     async function toggleActivo(id, estadoActual) {
       await clienteSupabase.from('checklist_mercado').update({ activo: !estadoActual }).eq('id', id); renderApp();
     }
 
-    async function registrarCompra(id, precioSel) {
-      if(precioSel <= 0) return alert("Asigna un precio válido antes de comprar.");
-      await clienteSupabase.from('checklist_mercado').update({ comprado: true, fecha_compra: new Date().toISOString() }).eq('id', id);
-      renderApp();
-    }
-    
     async function quitar(id) { await clienteSupabase.from('checklist_mercado').delete().eq('id', id); renderApp(); }
 
+    // --- LA CALCULADORA EN TIEMPO REAL ---
+    // Esta función actualiza visualmente la diferencia mientras escribes, SIN guardar aún en BBDD
+    function calcularDiferenciaLocal(itemId) {
+      const precioReal = parseFloat(document.getElementById(`precio-real-${itemId}`).value) || 0;
+      const cantReal = parseInt(document.getElementById(`cant-real-${itemId}`).value) || 1;
+      const precioEstimado = parseFloat(document.getElementById(`precio-est-${itemId}`).value) || 0;
+      
+      const subtotalReal = precioReal * cantReal;
+      const subtotalEstimado = precioEstimado * cantReal;
+      const diferencia = subtotalEstimado - subtotalReal;
+
+      const divDif = document.getElementById(`dif-${itemId}`);
+      if (precioReal === 0) {
+        divDif.innerHTML = `Subtotal Real: $0`;
+        divDif.className = 'diferencia-text';
+      } else if (diferencia >= 0) {
+        divDif.innerHTML = `Ahorro: +${formatearMoneda(diferencia)} (Subt: ${formatearMoneda(subtotalReal)})`;
+        divDif.className = 'diferencia-text ahorro';
+      } else {
+        divDif.innerHTML = `Sobrecosto: ${formatearMoneda(diferencia)} (Subt: ${formatearMoneda(subtotalReal)})`;
+        divDif.className = 'diferencia-text sobrecosto';
+      }
+    }
+
+    // Al presionar "Comprado", tomamos los valores reales de la calculadora y los guardamos
+    async function registrarCompraReal(id) {
+      const precioReal = parseFloat(document.getElementById(`precio-real-${id}`).value);
+      const cantReal = parseInt(document.getElementById(`cant-real-${id}`).value);
+
+      if(isNaN(precioReal) || precioReal <= 0) return alert("Ingresa el precio real unitario de la factura para registrar la compra.");
+
+      // Actualizamos la base de datos con los valores de ejecución real
+      await clienteSupabase.from('checklist_mercado').update({ 
+        precio_seleccionado: precioReal, // Sobreescribimos el estimado con el real
+        cantidad: cantReal,
+        comprado: true, 
+        fecha_compra: new Date().toISOString() 
+      }).eq('id', id);
+      
+      renderApp();
+    }
+
+    // --- MOTOR PRINCIPAL DE RENDERIZADO ---
     async function renderApp() {
       const { data: catalogo } = await clienteSupabase.from('productos_mercado').select('*').order('id', {ascending:false});
       const { data: checkAll } = await clienteSupabase.from('checklist_mercado').select('*').order('id', {ascending:false});
@@ -173,60 +237,96 @@
       const checkPend = checkAll.filter(i => !i.comprado);
       const checkComp = checkAll.filter(i => i.comprado);
 
-      // --- MATEMÁTICAS GRÁFICAS ---
-      let mixto = 0; let peorEscenario = 0; let totTienda = {};
+      // --- CÁLCULO DE PRESUPUESTO (PENDIENTES) vs EJECUCIÓN (COMPRADOS HOY) ---
+      let presupuestoPendiente = 0; 
+      let gastoEjecutadoHoy = 0;
+      
+      // Calculamos lo pendiente basándonos en el precio estimado seleccionado
+      checkPend.forEach(i => {
+        if(i.activo) presupuestoPendiente += (i.precio_seleccionado * i.cantidad);
+      });
 
+      // Calculamos lo gastado basándonos en las compras realizadas HOY
+      const hoyStr = new Date().toLocaleDateString('es-CO');
+      checkComp.forEach(i => {
+        const fechaCompraStr = new Date(i.fecha_compra).toLocaleDateString('es-CO');
+        if (fechaCompraStr === hoyStr) {
+          gastoEjecutadoHoy += (i.precio_seleccionado * i.cantidad);
+        }
+      });
+
+      const presupuestoTotalViaje = presupuestoPendiente + gastoEjecutadoHoy;
+      
+      // Actualizar Header Resumen
+      document.getElementById('totalEstimado').textContent = formatearMoneda(presupuestoTotalViaje);
+      document.getElementById('totalEjecutado').textContent = formatearMoneda(gastoEjecutadoHoy);
+      
+      const diffGlobal = document.getElementById('diferenciaGlobal');
+      if (gastoEjecutadoHoy === 0) {
+        diffGlobal.textContent = "$0";
+        diffGlobal.style.color = "gray";
+      } else {
+        const difCalc = presupuestoPendiente; // Lo que falta por gastar según el estimado
+        diffGlobal.textContent = formatearMoneda(difCalc);
+        diffGlobal.style.color = "var(--primary)";
+      }
+
+      // Actualizar gráfica comparativa (Estimado Pendiente vs Opciones)
+      let totTienda = {};
       checkPend.forEach(i => {
         if(!i.activo) return;
         const p = catalogo.find(x=>x.id===i.producto_id);
-        if(!p) return;
-        
-        mixto += (i.precio_seleccionado * i.cantidad);
-        let max = i.precio_seleccionado; 
-        
-        p.historial_precios.forEach(h => {
-          if(h.precio > max) max = h.precio;
-          if(!totTienda[h.tienda]) totTienda[h.tienda] = 0;
-          totTienda[h.tienda] += (h.precio * i.cantidad);
-        });
-        peorEscenario += (max * i.cantidad);
+        if(p) {
+          p.historial_precios.forEach(h => {
+            if(!totTienda[h.tienda]) totTienda[h.tienda] = 0;
+            totTienda[h.tienda] += (h.precio * i.cantidad);
+          });
+        }
       });
-
-      document.getElementById('presupuestoMixto').textContent = formatearMoneda(mixto);
-      const ahorro = peorEscenario - mixto;
-      const et = document.getElementById('etiquetaAhorro');
-      if (ahorro > 0 && mixto > 0) { et.innerHTML = `<div class="saving-badge">🌟 Ahorrando ${formatearMoneda(ahorro)} vs opción más cara</div>`; } else { et.innerHTML = ''; }
 
       const ctx = document.getElementById('graficaComparativa').getContext('2d');
       if(chartMercado) chartMercado.destroy();
       chartMercado = new Chart(ctx, {
         type: 'bar',
-        data: { labels: ['Tu Elección', ...Object.keys(totTienda)], datasets: [{ label: 'Estimado', data: [mixto, ...Object.values(totTienda)], backgroundColor: ['#0066ff', ...Object.keys(totTienda).map(()=>'#cbd5e1')], borderRadius: 4 }] },
+        data: { labels: ['Estimado Pendiente', ...Object.keys(totTienda)], datasets: [{ label: 'Costo', data: [presupuestoPendiente, ...Object.values(totTienda)], backgroundColor: ['#0066ff', ...Object.keys(totTienda).map(()=>'#cbd5e1')], borderRadius: 4 }] },
         options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
       });
 
-      // --- CARRITO PENDIENTE ---
+      // --- RENDER CARRITO CON CALCULADORA INCORPORADA ---
       document.getElementById('contenedorChecklist').innerHTML = checkPend.map(i => {
         const p = catalogo.find(x=>x.id===i.producto_id);
         if(!p) return '';
-        const subtotal = i.precio_seleccionado * i.cantidad;
-        let opts = p.historial_precios.map(h=>`<option value="${h.tienda}|${h.precio}" ${(h.tienda===i.tienda_seleccionada && h.precio===i.precio_seleccionado)?'selected':''}>${h.tienda} - ${formatearMoneda(h.precio)} c/u</option>`).join('');
+        
+        let opts = p.historial_precios.map(h=>`<option value="${h.tienda}|${h.precio}" ${(h.tienda===i.tienda_seleccionada && h.precio===i.precio_seleccionado)?'selected':''}>${h.tienda} - Estimado: ${formatearMoneda(h.precio)}</option>`).join('');
         
         return `
         <li class="checklist-item ${!i.activo?'inactivo':''}">
           <input type="checkbox" class="checkbox" ${i.activo?'checked':''} onclick="toggleActivo(${i.id}, ${i.activo})">
           <div class="checklist-info">
             <div style="display:flex; justify-content:space-between; align-items:center;">
-              <span style="font-weight:700; font-size:0.95rem;">${p.nombre}</span>
-              <div class="qty-box"><span>Cant:</span><input type="number" class="input-qty" min="1" value="${i.cantidad}" onchange="cambiarCantidad(${i.id}, this.value)"></div>
+              <span style="font-weight:700; font-size:1rem; color: var(--primary);">${p.nombre}</span>
+              <button class="btn-remove" onclick="quitar(${i.id})">×</button>
             </div>
-            <select class="select-tienda" onchange="cambiarTienda(${i.id}, this.value)">${opts||'<option value="0|0">Sin precios</option>'}</select>
-            <div style="font-size:0.8rem; color:var(--primary); text-align:right; font-weight:bold;">Subtotal: ${formatearMoneda(subtotal)}</div>
-            <button class="btn-buy" onclick="registrarCompra(${i.id}, ${i.precio_seleccionado})">✅ Marcar como Comprado</button>
+            
+            <div class="estimado-text">Base de cotización:</div>
+            <select class="select-tienda" onchange="cambiarTiendaEstimada(${i.id}, this.value)">${opts||'<option value="0|0">Sin precios base registrados</option>'}</select>
+            
+            <!-- CAMPO OCULTO CON EL PRECIO ESTIMADO PARA CÁLCULOS -->
+            <input type="hidden" id="precio-est-${i.id}" value="${i.precio_seleccionado}">
+
+            <!-- PANEL DE CALCULADORA REAL -->
+            <div class="calc-panel">
+              <div style="font-size:0.75rem; font-weight:bold; color:#166534; text-transform:uppercase;">Factura Real:</div>
+              <div class="calc-row">
+                <div style="flex:1;"><input type="number" class="calc-input" id="precio-real-${i.id}" placeholder="Precio Unit. $" oninput="calcularDiferenciaLocal(${i.id})"></div>
+                <div class="qty-box"><span style="font-size:0.8rem;">Cant:</span><input type="number" class="input-qty" id="cant-real-${i.id}" min="1" value="${i.cantidad}" oninput="calcularDiferenciaLocal(${i.id})"></div>
+              </div>
+              <div id="dif-${i.id}" class="diferencia-text" style="color: gray;">Subtotal Real: $0</div>
+              <button class="btn-buy" onclick="registrarCompraReal(${i.id})">✅ Marcar como Comprado</button>
+            </div>
           </div>
-          <button class="btn-remove" onclick="quitar(${i.id})">×</button>
         </li>`;
-      }).join('') || '<p style="text-align:center; font-size:0.85rem; color:gray;">Carrito vacío.</p>';
+      }).join('') || '<p style="text-align:center; font-size:0.85rem; color:gray; padding: 20px 0;">Carrito vacío. Ve al catálogo maestro para planear tu compra.</p>';
 
       // --- HISTÓRICO REAL MENSUAL ---
       const histPorMes = {};
@@ -234,7 +334,7 @@
         const f = new Date(i.fecha_compra);
         const mesAnio = f.toLocaleDateString('es-CO', { month: 'short', year: 'numeric' }).toUpperCase();
         if(!histPorMes[mesAnio]) histPorMes[mesAnio] = 0;
-        histPorMes[mesAnio] += (i.precio_seleccionado * i.cantidad);
+        histPorMes[mesAnio] += (i.precio_seleccionado * i.cantidad); // Recuerda que al comprar sobreescribimos este valor con el real
       });
 
       const ctxHist = document.getElementById('graficaHistorico').getContext('2d');
@@ -249,16 +349,17 @@
         ? Object.keys(histPorMes).map(m => `<div class="history-row"><span>${m}</span><strong style="color:var(--success); font-size:1.1rem;">${formatearMoneda(histPorMes[m])}</strong></div>`).join('')
         : '<p style="text-align:center; font-size:0.8rem; color:gray;">Aún no hay compras en el histórico.</p>';
 
-      // --- CATÁLOGO ---
+      // --- CATÁLOGO MAESTRO ---
       document.getElementById('contenedorCatalogo').innerHTML = catalogo.map(p => `
         <li class="item">
           <div class="item-header"><span>${p.nombre}</span><button class="btn-delete-master" onclick="eliminarProductoCatalogo(${p.id})">🗑️ Borrar</button></div>
           <div>${(p.historial_precios||[]).map(h=>`<div class="history-row"><span>${h.tienda}</span><div><strong>${formatearMoneda(h.precio)}</strong><button class="btn-edit" onclick="activarEdicion(${p.id}, '${h.tienda}', ${h.precio})">✏️</button></div></div>`).join('')}</div>
-          <div style="display:flex; gap:6px; margin-top:10px;"><input type="text" id="tienda-${p.id}" placeholder="Tienda (Ej. D1)" style="flex:1; padding:8px; border-radius:6px; border:1px solid #e5e7eb;"><input type="number" id="precio-${p.id}" placeholder="Unit." style="width:75px; padding:8px; border-radius:6px; border:1px solid #e5e7eb;"><button type="button" class="btn-primary" onclick="guardarPrecio(${p.id})">Guardar</button></div>
-          <button type="button" onclick="agregarALista(${p.id})" style="width:100%; margin-top:8px; background:#e0ecfb; color:var(--primary); font-weight:bold; border:none; padding:8px; border-radius:6px; cursor:pointer;">Añadir al Carrito</button>
+          <div style="display:flex; gap:6px; margin-top:10px;"><input type="text" id="tienda-${p.id}" placeholder="Nueva Tienda (Ej. D1)" style="flex:1; padding:8px; border-radius:6px; border:1px solid #e5e7eb;"><input type="number" id="precio-${p.id}" placeholder="Precio Unit." style="width:100px; padding:8px; border-radius:6px; border:1px solid #e5e7eb;"><button type="button" class="btn-primary" onclick="guardarPrecio(${p.id})">Fijar Precio Base</button></div>
+          <button type="button" onclick="agregarALista(${p.id})" style="width:100%; margin-top:8px; background:#e0ecfb; color:var(--primary); font-weight:bold; border:none; padding:8px; border-radius:6px; cursor:pointer;">Añadir al Carrito Actual</button>
         </li>
       `).join('');
     }
+    
     renderApp();
   </script>
 </body>
