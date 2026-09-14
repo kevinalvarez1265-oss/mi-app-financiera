@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Mercado - Ejecución Real</title>
+  <title>Mercado Inteligente (IA)</title>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
@@ -15,38 +15,41 @@
     header { display: flex; justify-content: space-between; align-items: center; }
     header h1 { font-size: 1.4rem; color: #111827; }
     .btn-nav { background: #e0ecfb; color: var(--primary); border: none; padding: 6px 12px; border-radius: 6px; font-size: 0.85rem; font-weight: 600; text-decoration: none;}
+    .btn-config { background: #f3f4f6; border: 1px solid #cbd5e1; padding: 6px; border-radius: 6px; cursor: pointer; font-size: 1rem; }
     
     .card { background: var(--card-bg); border-radius: 12px; padding: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); border: 1px solid var(--border); }
     .card-title { font-size: 1.1rem; font-weight: 700; margin-bottom: 12px; }
     
-    /* RESUMEN DE PRESUPUESTO */
+    /* MODAL CONFIGURACIÓN IA */
+    #modalConfig { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center;}
+    .modal-content { background: white; padding: 20px; border-radius: 12px; width: 90%; max-width: 400px;}
+    
     .execution-summary { display: flex; justify-content: space-between; background: #f8fafc; border: 1px solid var(--border); border-radius: 8px; padding: 10px; margin-bottom: 15px;}
     .execution-item { display: flex; flex-direction: column; align-items: center; flex: 1;}
     .execution-label { font-size: 0.7rem; color: gray; font-weight: bold; text-transform: uppercase;}
     .execution-value { font-weight: bold; font-size: 1.1rem;}
 
-    /* CALCULADORA RÁPIDA (PANEL FIJO) */
+    /* CALCULADORA CON IA */
     .supermarket-panel { border: 2px solid #166534; background: #f0fdf4; position: sticky; top: 10px; z-index: 100;}
-    .supermarket-title { color: #166534; font-size: 1.1rem; font-weight: 800; display: flex; align-items: center; gap: 6px; margin-bottom: 12px;}
+    .supermarket-title { color: #166534; font-size: 1.1rem; font-weight: 800; display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;}
     .form-row { display: flex; gap: 8px; width: 100%; margin-bottom: 10px;}
     .form-row > div { flex: 1; display: flex; flex-direction: column; gap: 4px; }
     .form-row label { font-size: 0.8rem; font-weight: bold; color: #166534; }
     .big-input { padding: 10px; font-size: 1rem; font-weight: bold; border-radius: 8px; border: 1px solid #86efac; outline: none; width: 100%;}
     .big-btn { background: #166534; color: white; border: none; padding: 12px; border-radius: 8px; font-size: 1rem; font-weight: bold; cursor: pointer; width: 100%; transition: background 0.2s;}
     
-    /* LISTAS */
+    .btn-ia { background: #8b5cf6; color: white; border: none; padding: 6px 12px; border-radius: 6px; font-size: 0.85rem; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 6px; box-shadow: 0 2px 4px rgba(139, 92, 246, 0.3);}
+    #ia-status { font-size: 0.75rem; color: #8b5cf6; font-weight: bold; display: none; text-align: center; margin-bottom: 8px;}
+
     .chart-container { position: relative; height: 180px; width: 100%; margin-bottom: 15px; }
     .item-list { list-style: none; display: flex; flex-direction: column; gap: 10px; }
-    .item { background: #fff; border: 1px solid var(--border); border-radius: 8px; padding: 12px; }
-    .item-header { display: flex; justify-content: space-between; align-items: center; font-weight: 700; color: var(--primary); border-bottom: 1px dashed var(--border); padding-bottom: 6px; margin-bottom: 6px;}
+    .item, .checklist-item { background: #fff; border: 1px solid var(--border); border-radius: 8px; padding: 12px; }
     
-    /* ITEMS DEL CARRITO (CHECKLIST) */
     .checklist-item { display: flex; flex-direction: column; gap: 8px; border: 1px solid var(--border); border-radius: 8px; padding: 12px; background: #fff;}
     .checklist-header { display: flex; justify-content: space-between; align-items: flex-start;}
     .checklist-title { font-weight: 700; font-size: 1.05rem; color: #111827; }
     .checklist-est { font-size: 0.8rem; color: gray; margin-top: 2px;}
     
-    /* Estados de ejecución (Ahorro/Pérdida) */
     .ejecucion-box { border-radius: 6px; padding: 8px; font-size: 0.85rem; display: flex; justify-content: space-between; align-items: center; margin-top: 6px;}
     .box-pendiente { background: #f8fafc; border: 1px dashed #cbd5e1; }
     .box-ahorro { background: #dcfce7; border: 1px solid #bbf7d0; color: #166534; font-weight: bold;}
@@ -62,15 +65,43 @@
   </style>
 </head>
 <body>
+  
+  <!-- MODAL CONFIGURACIÓN API KEY -->
+  <div id="modalConfig">
+    <div class="modal-content">
+      <h3 style="margin-bottom: 12px;">Configurar Inteligencia Artificial</h3>
+      <p style="font-size: 0.8rem; color: gray; margin-bottom: 12px;">Ingresa tu API Key de Google Gemini. Se guardará localmente en tu celular por seguridad.</p>
+      <input type="password" id="inputApiKey" placeholder="AIzaSy..." style="width: 100%; margin-bottom: 12px; padding: 10px; border-radius: 8px;">
+      <div style="display: flex; justify-content: flex-end; gap: 10px;">
+        <button type="button" onclick="cerrarConfigIA()" style="background: #e5e7eb; border: none;">Cancelar</button>
+        <button type="button" class="btn-primary" onclick="guardarConfigIA()">Guardar</button>
+      </div>
+    </div>
+  </div>
+
   <div class="container">
     <header>
-      <h1>Auditoría de Mercado</h1>
+      <div style="display: flex; gap: 10px; align-items: center;">
+        <h1>Auditoría Mercado</h1>
+        <button class="btn-config" onclick="abrirConfigIA()" title="Configurar IA">⚙️</button>
+      </div>
       <a href="./" class="btn-nav">💰 Presupuesto</a>
     </header>
 
-    <!-- CALCULADORA RÁPIDA (FIJA) -->
+    <!-- CALCULADORA RÁPIDA CON CÁMARA IA -->
     <section class="card supermarket-panel" id="panelCalculadora">
-      <div class="supermarket-title">⚡ Registrar Compra Real</div>
+      <div class="supermarket-title">
+        <span>⚡ Calculadora Rápida</span>
+        
+        <!-- BOTÓN DE IA OCULTO (Abre la cámara) -->
+        <label class="btn-ia" title="Escanear precio con cámara">
+          📸 Escanear
+          <input type="file" accept="image/*" capture="environment" style="display: none;" onchange="procesarFotoConIA(event)">
+        </label>
+      </div>
+      
+      <div id="ia-status">Analizando imagen con IA... ⏳</div>
+
       <form id="formCompraRapida" onsubmit="procesarCompraRapida(event)">
         <div style="margin-bottom: 10px;">
           <select id="calc-item" class="big-input" style="color:var(--primary);" required>
@@ -102,11 +133,11 @@
       <div class="card-title">Resumen del Viaje Actual</div>
       <div class="execution-summary">
         <div class="execution-item">
-          <span class="execution-label">Planeado (Total)</span>
+          <span class="execution-label">Planeado</span>
           <span class="execution-value" style="color: var(--primary);" id="totalEstimado">$0</span>
         </div>
         <div class="execution-item" style="border-left: 1px solid var(--border); border-right: 1px solid var(--border);">
-          <span class="execution-label">Ejecutado (Real)</span>
+          <span class="execution-label">Ejecutado (Hoy)</span>
           <span class="execution-value" style="color: var(--text);" id="totalEjecutado">$0</span>
         </div>
         <div class="execution-item">
@@ -117,7 +148,7 @@
       <div class="chart-container"><canvas id="graficaComparativa"></canvas></div>
     </section>
 
-    <!-- LISTA DE EJECUCIÓN (CARRITO) -->
+    <!-- LISTA DE EJECUCIÓN -->
     <section class="card">
       <div class="card-title">🛒 Mi Carrito (Contraste)</div>
       <ul class="item-list" id="contenedorChecklist"></ul>
@@ -146,7 +177,80 @@
     const formatearMoneda = (n) => new Intl.NumberFormat('es-CO', {style:'currency',currency:'COP',maximumFractionDigits:0}).format(n);
     let chartMercado = null;
 
-    // --- FUNCIONES CATÁLOGO ---
+    // ================= INTELIGENCIA ARTIFICIAL (GEMINI VISION) =================
+    function abrirConfigIA() { 
+      document.getElementById('inputApiKey').value = localStorage.getItem('gemini_api_key_hogar') || '';
+      document.getElementById('modalConfig').style.display = 'flex'; 
+    }
+    function cerrarConfigIA() { document.getElementById('modalConfig').style.display = 'none'; }
+    function guardarConfigIA() {
+      const key = document.getElementById('inputApiKey').value.trim();
+      if(key) { localStorage.setItem('gemini_api_key_hogar', key); alert("Llave guardada en el dispositivo."); }
+      cerrarConfigIA();
+    }
+
+    async function procesarFotoConIA(evento) {
+      const apiKey = localStorage.getItem('gemini_api_key_hogar');
+      if (!apiKey) { alert("¡Primero debes configurar tu API Key tocando el botón ⚙️ arriba!"); return; }
+      
+      const archivo = evento.target.files[0];
+      if (!archivo) return;
+
+      const iaStatus = document.getElementById('ia-status');
+      iaStatus.style.display = 'block';
+      iaStatus.textContent = "Analizando etiqueta con IA... 📸⏳";
+
+      try {
+        // 1. Convertir la foto a formato Base64 para poder enviarla a Google
+        const reader = new FileReader();
+        reader.readAsDataURL(archivo);
+        
+        reader.onload = async () => {
+          const base64Photo = reader.result.split(',')[1]; // Extraer solo la data pura
+
+          // 2. Construir el Prompt para Gemini
+          const peticion = {
+            contents: [{
+              parts: [
+                { text: "Eres un asistente de compras. Mira esta foto de una etiqueta de supermercado. Extrae únicamente el precio del producto y devuelve SOLAMENTE EL NÚMERO entero sin puntos ni comas ni símbolos (Ej: si dice $ 4.500, responde 4500)." },
+                { inlineData: { mimeType: archivo.type, data: base64Photo } }
+              ]
+            }]
+          };
+
+          // 3. Llamar a la API de Google Gemini Pro Vision
+          const respuesta = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(peticion)
+          });
+
+          const datos = await respuesta.json();
+          
+          if (datos.error) { throw new Error(datos.error.message); }
+
+          // 4. Leer la respuesta e insertar en la calculadora
+          let precioExtraido = datos.candidates[0].content.parts[0].text.trim();
+          precioExtraido = precioExtraido.replace(/[^0-9]/g, ''); // Limpiar si la IA envió símbolos extra
+          
+          if (precioExtraido) {
+            document.getElementById('calc-precio').value = precioExtraido;
+            iaStatus.textContent = `¡Listo! Precio detectado: $${precioExtraido} ✨`;
+            setTimeout(() => iaStatus.style.display = 'none', 3000);
+          } else {
+            iaStatus.textContent = "La IA no logró detectar un precio claro. Intenta de nuevo.";
+            setTimeout(() => iaStatus.style.display = 'none', 4000);
+          }
+        };
+      } catch (error) {
+        console.error(error);
+        iaStatus.textContent = "Error de conexión con la IA.";
+        setTimeout(() => iaStatus.style.display = 'none', 3000);
+      }
+    }
+
+
+    // --- FUNCIONES CATÁLOGO Y CARRITO ---
     document.getElementById('formNuevoProducto').addEventListener('submit', async (e) => {
       e.preventDefault();
       await clienteSupabase.from('productos_mercado').insert([{ nombre: document.getElementById('nombreProducto').value.trim() }]);
@@ -154,7 +258,7 @@
     });
 
     async function eliminarProductoCatalogo(id) {
-      if(confirm('¿Eliminar del catálogo y del carrito?')) { await clienteSupabase.from('productos_mercado').delete().eq('id', id); renderApp(); }
+      if(confirm('¿Eliminar del catálogo y carrito?')) { await clienteSupabase.from('productos_mercado').delete().eq('id', id); renderApp(); }
     }
 
     async function guardarPrecioEstimado(id) {
@@ -162,33 +266,27 @@
       t = t.charAt(0).toUpperCase() + t.slice(1).toLowerCase(); 
       const p = parseFloat(document.getElementById(`precio-${id}`).value);
       if(!t || isNaN(p)) return;
-
       const { data: prod } = await clienteSupabase.from('productos_mercado').select('historial_precios').eq('id', id).single();
       let hist = prod.historial_precios || [];
       const i = hist.findIndex(h=>h.tienda===t);
       if(i>=0) hist[i].precio = p; else hist.push({tienda: t, precio: p});
-      
       await clienteSupabase.from('productos_mercado').update({ historial_precios: hist }).eq('id', id); renderApp();
     }
 
-    // --- FUNCIONES CARRITO ---
     async function agregarPlaneado(id) {
       const { data: prods } = await clienteSupabase.from('productos_mercado').select('*').eq('id', id);
-      const prod = prods[0];
       await clienteSupabase.from('checklist_mercado').insert([{ 
         producto_id: id, 
-        tienda_estimada: prod.historial_precios[0]?.tienda||"", 
-        precio_estimado: prod.historial_precios[0]?.precio||0,
-        cantidad_estimada: 1,
-        activo: true, comprado: false
+        tienda_estimada: prods[0].historial_precios[0]?.tienda||"", 
+        precio_estimado: prods[0].historial_precios[0]?.precio||0,
+        cantidad_estimada: 1, activo: true, comprado: false
       }]);
       renderApp();
     }
 
     async function cambiarBaseEstimada(id, val) {
       const [t, p] = val.split('|');
-      await clienteSupabase.from('checklist_mercado').update({ tienda_estimada: t, precio_estimado: parseFloat(p) }).eq('id', id);
-      renderApp();
+      await clienteSupabase.from('checklist_mercado').update({ tienda_estimada: t, precio_estimado: parseFloat(p) }).eq('id', id); renderApp();
     }
 
     async function quitarDelCarrito(id) { 
@@ -200,9 +298,7 @@
       document.getElementById('calc-item').value = id_checklist;
       document.getElementById('calc-cant').value = cant_planeada || 1;
       document.getElementById('calc-tienda').value = tienda_planeada || "";
-      
       window.scrollTo({ top: 0, behavior: 'smooth' });
-      document.getElementById('calc-precio').focus();
     }
 
     async function procesarCompraRapida(e) {
@@ -218,14 +314,10 @@
       if(!checklistId) { alert("Selecciona un producto."); btn.disabled = false; btn.textContent = "✅ Guardar Ejecución"; return; }
 
       await clienteSupabase.from('checklist_mercado').update({ 
-        tienda_real: tiendaReal,
-        precio_real: precioReal, 
-        cantidad_real: cantReal,
-        comprado: true, 
-        fecha_compra: new Date().toISOString() 
+        tienda_real: tiendaReal, precio_real: precioReal, cantidad_real: cantReal,
+        comprado: true, fecha_compra: new Date().toISOString() 
       }).eq('id', checklistId);
       
-      // Limpiar Formulario
       document.getElementById('formCompraRapida').reset();
       renderApp();
       btn.disabled = false; btn.textContent = "✅ Guardar Ejecución";
@@ -241,17 +333,14 @@
       const calcSelect = document.getElementById('calc-item');
       let optionsHTML = '<option value="">-- Selecciona producto a registrar --</option>';
 
-      // RENDERIZAR CARRITO Y CONTRASTES
       document.getElementById('contenedorChecklist').innerHTML = checkAll.map(i => {
         const p = catalogo.find(x=>x.id===i.producto_id);
         if(!p) return '';
         
-        // Sumatorias para el Resumen (Asumimos todo el carrito como 1 solo viaje/presupuesto)
         const subtEstimado = (i.precio_estimado || 0) * (i.cantidad_estimada || 1);
         planeadoTotal += subtEstimado;
 
         if (!i.comprado) {
-          // AUN NO COMPRADO (PENDIENTE)
           optionsHTML += `<option value="${i.id}">${p.nombre}</option>`;
           let opts = p.historial_precios.map(h=>`<option value="${h.tienda}|${h.precio}" ${(h.tienda===i.tienda_estimada && h.precio===i.precio_estimado)?'selected':''}>${h.tienda} - ${formatearMoneda(h.precio)}</option>`).join('');
           
@@ -273,7 +362,6 @@
             </div>
           </li>`;
         } else {
-          // COMPRADO (CONTRASTE REALIZADO)
           const subtReal = (i.precio_real || 0) * (i.cantidad_real || 1);
           ejecutadoTotal += subtReal;
           const dif = subtEstimado - subtReal;
@@ -297,7 +385,7 @@
             </div>
             <div class="ejecucion-box ${estadoClass}">
               <span>${estadoText}</span>
-              <span style="font-size:0.75rem;">Reabrir ⚡</span>
+              <button class="btn-fast-load" style="background:transparent; border:none;" onclick="cargarEnCalculadora(${i.id}, ${i.cantidad_real}, '${i.tienda_real}')">⚡</button>
             </div>
           </li>`;
         }
@@ -305,7 +393,6 @@
 
       calcSelect.innerHTML = optionsHTML;
 
-      // ACTUALIZAR RESUMEN GENERAL
       document.getElementById('totalEstimado').textContent = formatearMoneda(planeadoTotal);
       document.getElementById('totalEjecutado').textContent = formatearMoneda(ejecutadoTotal);
       
@@ -315,7 +402,6 @@
       else if (balanceGeneral >= 0) { divBalance.textContent = `+${formatearMoneda(balanceGeneral)}`; divBalance.style.color = "var(--success)"; }
       else { divBalance.textContent = formatearMoneda(balanceGeneral); divBalance.style.color = "var(--danger)"; }
 
-      // GRAFICA COMPARATIVA GLOBAL
       const ctx = document.getElementById('graficaComparativa').getContext('2d');
       if(chartMercado) chartMercado.destroy();
       chartMercado = new Chart(ctx, {
@@ -327,7 +413,6 @@
         options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } } }
       });
 
-      // RENDER CATÁLOGO MAESTRO (Permanece igual)
       document.getElementById('contenedorCatalogo').innerHTML = catalogo.map(p => `
         <li class="item">
           <div class="item-header"><span>${p.nombre}</span><button class="btn-delete-master" onclick="eliminarProductoCatalogo(${p.id})">🗑️ Borrar</button></div>
