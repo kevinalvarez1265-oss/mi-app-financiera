@@ -3,11 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Dashboard Analítico - Nube</title>
+  <title>Dashboard Financiero - Base Cero</title>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
-    :root { --bg: #f3f4f6; --card-bg: #ffffff; --primary: #0066ff; --text: #1f2937; --border: #e5e7eb; --success: #10b981; --danger: #ef4444; }
+    :root { --bg: #f3f4f6; --card-bg: #ffffff; --primary: #0066ff; --text: #1f2937; --border: #e5e7eb; --success: #10b981; --warning: #f59e0b; --danger: #ef4444; }
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, sans-serif; }
     body { background-color: var(--bg); color: var(--text); padding: 20px 12px; min-height: 100vh; display: flex; flex-direction: column; align-items: center; }
     
@@ -31,6 +31,14 @@
     .balance-main { text-align: center; padding-bottom: 12px; border-bottom: 1px solid var(--border); margin-bottom: 12px; }
     .balance-total { font-size: 2.2rem; font-weight: 800; color: #111827; }
     
+    /* BARRAS DE PROGRESO BASE CERO */
+    .progress-container { display: flex; flex-direction: column; gap: 12px; margin-top: 10px; }
+    .progress-item { display: flex; flex-direction: column; gap: 4px; }
+    .progress-header { display: flex; justify-content: space-between; font-size: 0.85rem; font-weight: bold; }
+    .progress-bar-bg { width: 100%; height: 10px; background-color: #e5e7eb; border-radius: 5px; overflow: hidden; position: relative;}
+    .progress-bar-fill { height: 100%; border-radius: 5px; transition: width 0.4s ease; }
+    .progress-labels { display: flex; justify-content: space-between; font-size: 0.7rem; color: gray; margin-top: 2px;}
+
     .alert-banner { display:flex; align-items:center; gap:8px; padding: 10px; border-radius: 8px; font-size: 0.85rem; font-weight: 600; margin-bottom: 12px; justify-content: center; }
     .alert-banner.good { background: #dcfce7; color: #166534; border: 1px solid #bbf7d0; }
     .alert-banner.bad { background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; }
@@ -48,14 +56,15 @@
     .account-pill { background: #eff6ff; border: 1px solid #bfdbfe; padding: 8px 6px; border-radius: 8px; text-align: center; }
     
     form { display: flex; flex-direction: column; gap: 12px; }
-    .row { display: flex; gap: 10px; } .row > div { flex: 1; }
+    .row { display: flex; gap: 10px; } .row > div { flex: 1; display: flex; flex-direction: column; gap: 4px;}
     input, select, button { padding: 10px; border-radius: 8px; border: 1px solid var(--border); width: 100%; outline: none; }
     button.btn-primary { background: var(--primary); color: #fff; font-weight: 600; border: none; cursor: pointer; }
     
     .mov-list { list-style: none; display: flex; flex-direction: column; gap: 8px; }
     .mov-item { display: flex; justify-content: space-between; padding: 12px; background: #f9fafb; border-radius: 8px; border-left: 4px solid; }
     .mov-item.ingreso { border-left-color: var(--success); } .mov-item.gasto { border-left-color: var(--danger); }
-    .cat-item { display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; background: #f8fafc; border: 1px solid var(--border); border-radius: 6px; margin-bottom: 6px; font-size: 0.85rem; }
+    .cat-item { display: flex; flex-direction: column; gap: 4px; padding: 8px 12px; background: #f8fafc; border: 1px solid var(--border); border-radius: 6px; margin-bottom: 6px; font-size: 0.85rem; }
+    .cat-header { display: flex; justify-content: space-between; align-items: center; }
   </style>
 </head>
 <body>
@@ -89,62 +98,96 @@
       <a href="mercado.html" class="btn-nav">🛒 Ir a Mercado</a>
     </header>
 
+    <!-- TARJETA 1: RESUMEN GENERAL -->
     <section class="card">
       <div class="balance-main">
-        <div style="font-size: 0.85rem; color: gray; font-weight: 600;">SALDO TOTAL (Histórico)</div>
+        <div style="font-size: 0.85rem; color: gray; font-weight: 600;">SALDO TOTAL DISPONIBLE</div>
         <div class="balance-total" id="saldoDisponible">$0</div>
       </div>
-      <div id="alertaTendencia"></div>
       
-      <div style="font-size: 1.05rem; font-weight: bold; margin-bottom: 10px; margin-top: 15px;">Resumen del Mes Actual</div>
+      <div style="font-size: 0.95rem; font-weight: bold; margin-bottom: 10px; margin-top: 15px; color:var(--text);">Flujo del Mes Actual</div>
       <div class="grid-2">
-        <div class="stat-box"><div style="font-size: 0.75rem; color: gray; font-weight: 600;">Ingresos</div><div style="font-size: 1.1rem; font-weight: 700; color: var(--success);" id="totalIngresos">$0</div></div>
-        <div class="stat-box"><div style="font-size: 0.75rem; color: gray; font-weight: 600;">Gastos</div><div style="font-size: 1.1rem; font-weight: 700; color: var(--danger);" id="totalGastos">$0</div></div>
+        <div class="stat-box"><div style="font-size: 0.75rem; color: gray; font-weight: 600;">Ingresos Mes</div><div style="font-size: 1.1rem; font-weight: 700; color: var(--success);" id="totalIngresos">$0</div></div>
+        <div class="stat-box"><div style="font-size: 0.75rem; color: gray; font-weight: 600;">Gastos Mes</div><div style="font-size: 1.1rem; font-weight: 700; color: var(--danger);" id="totalGastos">$0</div></div>
       </div>
-      
-      <div class="charts-grid">
-        <div class="chart-box"><h3>Gastos por Categoría</h3><div class="chart-container"><canvas id="graficaCategorias"></canvas></div></div>
-        <div class="chart-box"><h3>Gastos por Persona</h3><div class="chart-container"><canvas id="graficaPersonas"></canvas></div></div>
-      </div>
-      
-      <div style="font-size: 0.85rem; color: gray; font-weight: 600; margin-top: 20px; margin-bottom: 5px;">DISTRIBUCIÓN DE CUENTAS</div>
-      <div class="accounts-wrap" id="contenedorCuentas"></div>
     </section>
 
-    <!-- NUEVA SECCIÓN: EVOLUCIÓN HISTÓRICA MENSUAL -->
+    <!-- TARJETA NUEVA: CONTROL DE PRESUPUESTO (BARRAS) -->
     <section class="card">
-      <h2 style="font-size: 1.05rem; margin-bottom: 6px;">Evolución Financiera Mensual</h2>
-      <p style="font-size: 0.8rem; color: gray; margin-bottom: 12px;">Compara tus ingresos frente a tus gastos a lo largo del tiempo para medir tu capacidad de ahorro.</p>
-      <div class="chart-container-large">
-        <canvas id="graficaEvolucion"></canvas>
+      <h2 style="font-size: 1.05rem; margin-bottom: 6px;">Control de Presupuesto (Mes Actual)</h2>
+      <p style="font-size: 0.8rem; color: gray; margin-bottom: 12px;">Visualiza cómo se consume tu presupuesto límite por cada categoría.</p>
+      
+      <div class="progress-container" id="contenedorProgreso">
+        <!-- Las barras se inyectarán aquí desde JS -->
       </div>
     </section>
 
+    <!-- TARJETA 3: REGISTRO DE MOVIMIENTOS -->
     <section class="card">
       <h2 style="font-size: 1.05rem; margin-bottom: 12px;">Registrar Transacción</h2>
       <form id="formMovimiento">
         <div class="row">
-          <div><select id="tipo" required id="selectTipo"><option value="Gasto">Gasto</option><option value="Ingreso">Ingreso</option></select></div>
-          <div><input type="number" id="monto" placeholder="Monto $" step="0.01" required></div>
+          <div>
+            <label style="font-size:0.75rem; font-weight:bold; color:gray;">TIPO</label>
+            <select id="tipo" required id="selectTipo"><option value="Gasto">Gasto</option><option value="Ingreso">Ingreso</option></select>
+          </div>
+          <div>
+            <label style="font-size:0.75rem; font-weight:bold; color:gray;">MONTO $</label>
+            <input type="number" id="monto" placeholder="Ej: 50000" step="0.01" required>
+          </div>
         </div>
-        <div><input type="text" id="desc" placeholder="Descripción" required></div>
+        <div>
+          <label style="font-size:0.75rem; font-weight:bold; color:gray;">DESCRIPCIÓN</label>
+          <input type="text" id="desc" placeholder="¿En qué se gastó?" required>
+        </div>
         <div class="row">
-          <div><select id="cuenta" required><option>Billetera Digital</option><option>Cuenta Bancaria</option><option>Efectivo</option></select></div>
-          <div id="cajaCat"><select id="cat" required></select></div>
+          <div>
+            <label style="font-size:0.75rem; font-weight:bold; color:gray;">CUENTA/ORIGEN</label>
+            <select id="cuenta" required><option>Billetera Digital</option><option>Cuenta Bancaria</option><option>Efectivo</option></select>
+          </div>
+          <div id="cajaCat">
+            <label style="font-size:0.75rem; font-weight:bold; color:gray;">PARTIDA (Categoría)</label>
+            <select id="cat" required></select>
+          </div>
         </div>
-        <button type="submit" class="btn-primary" id="btnGuardar">Guardar</button>
+        <button type="submit" class="btn-primary" id="btnGuardar">Guardar Movimiento</button>
       </form>
     </section>
 
+    <!-- TARJETA 4: GRÁFICAS -->
     <section class="card">
-      <h2 style="font-size: 1.05rem; margin-bottom: 12px;">Partidas de Gasto</h2>
-      <form id="formCat" style="flex-direction: row; gap: 8px;">
-        <input type="text" id="nuevaCat" placeholder="Nueva categoría..." required>
-        <button type="submit" class="btn-primary" style="width: auto;">Añadir</button>
-      </form>
-      <ul id="listaCatAdmin" style="list-style: none;"></ul>
+      <h2 style="font-size: 1.05rem; margin-bottom: 6px;">Distribución y Evolución</h2>
+      <div class="charts-grid">
+        <div class="chart-box"><h3>Gastos por Categoría</h3><div class="chart-container"><canvas id="graficaCategorias"></canvas></div></div>
+        <div class="chart-box"><h3>Gastos por Persona</h3><div class="chart-container"><canvas id="graficaPersonas"></canvas></div></div>
+      </div>
+      <div class="chart-container-large">
+        <canvas id="graficaEvolucion"></canvas>
+      </div>
+      <div style="font-size: 0.85rem; color: gray; font-weight: 600; margin-top: 20px; margin-bottom: 5px;">DISTRIBUCIÓN DE CUENTAS</div>
+      <div class="accounts-wrap" id="contenedorCuentas"></div>
     </section>
 
+    <!-- TARJETA 5: GESTIÓN DE CATEGORÍAS (PRESUPUESTO BASE CERO) -->
+    <section class="card">
+      <h2 style="font-size: 1.05rem; margin-bottom: 12px;">Planificar Partidas de Gasto</h2>
+      <form id="formCat">
+        <div class="row">
+          <div>
+            <label style="font-size:0.75rem; font-weight:bold; color:gray;">NOMBRE DE PARTIDA</label>
+            <input type="text" id="nuevaCat" placeholder="Ej: Arriendo, Transporte" required>
+          </div>
+          <div>
+            <label style="font-size:0.75rem; font-weight:bold; color:gray;">LÍMITE MENSUAL $</label>
+            <input type="number" id="limiteCat" placeholder="Ej: 500000" min="0" required>
+          </div>
+        </div>
+        <button type="submit" class="btn-primary">Fijar Presupuesto</button>
+      </form>
+      <ul id="listaCatAdmin" style="list-style: none; margin-top:15px;"></ul>
+    </section>
+
+    <!-- TARJETA 6: HISTORIAL -->
     <section class="card">
       <h2 style="font-size: 1.05rem; margin-bottom: 12px;">Últimos Movimientos</h2>
       <ul class="mov-list" id="listaMovimientos"></ul>
@@ -155,18 +198,15 @@
     // ================= CONEXIÓN A SUPABASE =================
     const SUPABASE_URL = "https://xqowrstjyzlyrczifmca.supabase.co";
     const SUPABASE_KEY = "sb_publishable_g0m2XAZRFxKXOfJh8ejKVg_FfsWXly-";
-    
     let clienteSupabase;
     try { clienteSupabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY); } 
     catch (e) { alert("Error iniciando Supabase: " + e.message); }
 
     const formatearMoneda = (n) => new Intl.NumberFormat('es-CO', {style:'currency',currency:'COP',maximumFractionDigits:0}).format(n);
     let modoRegistro = true;
-    let miGraficaCat = null;
-    let miGraficaPers = null;
-    let miGraficaEvolucion = null; // Nueva gráfica
+    let miGraficaCat = null; let miGraficaPers = null; let miGraficaEvolucion = null; 
 
-    // EVENTOS UI
+    // UI DE LOGIN
     document.getElementById('btnAlternar').addEventListener('click', () => {
       modoRegistro = !modoRegistro;
       document.getElementById('tituloAuth').textContent = modoRegistro ? 'Registrarse' : 'Iniciar Sesión';
@@ -189,8 +229,7 @@
 
     function mostrarError(msg) { 
       const err = document.getElementById('authError'); 
-      err.textContent = msg; 
-      err.style.display = 'block'; 
+      err.textContent = msg; err.style.display = 'block'; 
     }
 
     function iniciarSesionLocal(u) { 
@@ -205,93 +244,97 @@
         document.getElementById('app-view').style.display = 'block';
         document.getElementById('etiquetaUsuario').innerHTML = `Usuario: <strong>${s.nombre}</strong>`;
         document.getElementById('tipo').dispatchEvent(new Event('change'));
-        cargarCategorias(); 
-        cargarDashboard();
+        cargarCategorias(); cargarDashboard();
       } else {
         document.getElementById('auth-view').style.display = 'flex';
         document.getElementById('app-view').style.display = 'none';
       }
     }
 
-    // ================= LÓGICA DE LOGIN / REGISTRO =================
+    // LÓGICA LOGIN
     document.getElementById('formAutenticacion').addEventListener('submit', async function(e) {
       e.preventDefault(); 
       const btn = document.getElementById('btnAuthSubmit');
       btn.disabled = true; btn.textContent = "Conectando...";
-      
       const email = document.getElementById('inputEmail').value.trim().toLowerCase();
       const password = document.getElementById('inputPassword').value.trim();
       const nombre = document.getElementById('inputNombre').value.trim();
 
       try {
         if (modoRegistro) {
-          const { data: ext, error: errExt } = await clienteSupabase.from('usuarios_hogar').select('*').eq('email', email);
-          if (errExt) throw errExt;
-          if (ext && ext.length > 0) {
-            mostrarError("El correo ya está registrado. Inicia sesión.");
-            btn.disabled = false; btn.textContent = "Continuar";
-            return;
-          }
-          
+          const { data: ext } = await clienteSupabase.from('usuarios_hogar').select('*').eq('email', email);
+          if (ext && ext.length > 0) { mostrarError("El correo ya está registrado."); btn.disabled = false; btn.textContent = "Continuar"; return; }
           const { data, error } = await clienteSupabase.from('usuarios_hogar').insert([{ nombre, email, password }]).select();
           if (error) throw error;
           iniciarSesionLocal(data[0]);
         } else {
           const { data, error } = await clienteSupabase.from('usuarios_hogar').select('*').eq('email', email).eq('password', password);
           if (error) throw error;
-          if (data.length === 0) {
-            mostrarError("Correo o contraseña incorrectos.");
-            btn.disabled = false; btn.textContent = "Continuar";
-            return;
-          }
+          if (data.length === 0) { mostrarError("Credenciales incorrectas."); btn.disabled = false; btn.textContent = "Continuar"; return; }
           iniciarSesionLocal(data[0]);
         }
       } catch (error) { mostrarError("Error: " + error.message); }
       btn.disabled = false; btn.textContent = "Continuar";
     });
 
-    // ================= FUNCIONES BASE DE DATOS (DASHBOARD) =================
+    // ================= FUNCIONES BASE DE DATOS =================
     async function cargarCategorias() {
       try {
+        // Pedimos también el limite_mensual de la BBDD
         const { data } = await clienteSupabase.from('categorias_gastos').select('*').order('nombre');
         if(!data) return;
+        
+        // Llenar el Dropdown (Select)
         document.getElementById('cat').innerHTML = data.map(c => `<option value="${c.nombre}">${c.nombre}</option>`).join('');
         
-        const lista = document.getElementById('listaCatAdmin');
-        lista.innerHTML = data.map(c => `<li class="cat-item"><span>${c.nombre}</span><button type="button" class="btn-eliminar-cat" data-id="${c.id}" style="background:#fee2e2; border:none; color:red; padding:4px 8px; border-radius:4px; cursor:pointer;">Eliminar</button></li>`).join('');
-        
-        document.querySelectorAll('.btn-eliminar-cat').forEach(b => {
-          b.addEventListener('click', async (e) => {
-            if(confirm('¿Borrar categoría?')) { 
-              await clienteSupabase.from('categorias_gastos').delete().eq('id', e.target.getAttribute('data-id')); 
-              cargarCategorias(); 
-            }
-          });
-        });
+        // Llenar la lista de administración
+        document.getElementById('listaCatAdmin').innerHTML = data.map(c => `
+          <li class="cat-item">
+            <div class="cat-header">
+              <span style="font-weight:bold;">${c.nombre}</span>
+              <button type="button" onclick="eliminarCategoria(${c.id})" style="background:#fee2e2; border:none; color:red; padding:4px 8px; border-radius:4px; cursor:pointer; font-size:0.75rem; font-weight:bold;">Eliminar</button>
+            </div>
+            <div style="font-size:0.75rem; color:gray;">Presupuesto asignado: ${formatearMoneda(c.limite_mensual || 0)}/mes</div>
+          </li>
+        `).join('');
       } catch (error) { console.error(error); }
     }
 
     document.getElementById('formCat').addEventListener('submit', async (e) => {
       e.preventDefault();
       try {
-        const nueva = document.getElementById('nuevaCat').value.trim();
-        await clienteSupabase.from('categorias_gastos').insert([{ nombre: nueva }]);
+        const nombre = document.getElementById('nuevaCat').value.trim();
+        const limite = parseFloat(document.getElementById('limiteCat').value) || 0;
+        
+        await clienteSupabase.from('categorias_gastos').insert([{ nombre: nombre, limite_mensual: limite }]);
+        
         document.getElementById('nuevaCat').value = ''; 
+        document.getElementById('limiteCat').value = ''; 
         cargarCategorias();
+        cargarDashboard(); // Recargar barras
       } catch(err) { alert(err.message); }
     });
 
+    async function eliminarCategoria(id) {
+      if(confirm('¿Borrar categoría de gasto?')) { 
+        await clienteSupabase.from('categorias_gastos').delete().eq('id', id); 
+        cargarCategorias(); cargarDashboard();
+      }
+    }
+
+    // ================= RENDERIZADO DEL DASHBOARD (INCLUYE BASE CERO) =================
     async function cargarDashboard() {
       try {
         const { data: movs } = await clienteSupabase.from('flujo_hogar').select('*').order('fecha', { ascending: false });
-        if(!movs) return;
+        const { data: categorias } = await clienteSupabase.from('categorias_gastos').select('*');
+        if(!movs || !categorias) return;
 
-        // MATEMÁTICA 1: TOTALES GLOBALES (Histórico)
+        // TOTAL GLOBALES
         const ingGlob = movs.filter(m=>m.tipo==='Ingreso').reduce((a,b)=>a+Number(b.monto),0);
         const gasGlob = movs.filter(m=>m.tipo==='Gasto').reduce((a,b)=>a+Number(b.monto),0);
         document.getElementById('saldoDisponible').textContent = formatearMoneda(ingGlob - gasGlob);
 
-        // MATEMÁTICA 2: MES ACTUAL
+        // MES ACTUAL
         const mesActual = new Date().getMonth();
         const movsMes = movs.filter(m => new Date(m.fecha).getMonth() === mesActual);
 
@@ -300,69 +343,76 @@
         document.getElementById('totalIngresos').textContent = formatearMoneda(ingMes);
         document.getElementById('totalGastos').textContent = formatearMoneda(gasMes);
 
-        // Alertas de Presupuesto del Mes
-        const alerta = document.getElementById('alertaTendencia');
-        if (ingMes > 0) {
-          const pct = (gasMes / ingMes) * 100;
-          if (pct > 85) { alerta.className = 'alert-banner bad'; alerta.innerHTML = `⚠️ Has gastado el ${Math.round(pct)}% de tus ingresos del mes.`; } 
-          else if (pct < 60) { alerta.className = 'alert-banner good'; alerta.innerHTML = `🌟 Excelente nivel de ahorro. Gastaste el ${Math.round(pct)}%.`; } 
-          else { alerta.style.display = 'none'; }
-        } else { alerta.style.display = 'none'; }
-
-        // MATEMÁTICA 3: AGRUPACIÓN PARA GRÁFICAS DE PASTEL (Mes Actual)
+        // --- MOTOR DEL PRESUPUESTO BASE CERO (BARRAS) ---
         const gasCat = {}; const gasPers = {};
         movsMes.filter(m=>m.tipo==='Gasto').forEach(m => { 
           gasCat[m.categoria] = (gasCat[m.categoria] || 0) + Number(m.monto); 
           gasPers[m.persona] = (gasPers[m.persona] || 0) + Number(m.monto); 
         });
 
+        const htmlBarras = categorias.map(cat => {
+          const gastado = gasCat[cat.nombre] || 0;
+          const limite = cat.limite_mensual || 0;
+          
+          if (limite === 0) return ''; // No mostrar barras para categorías sin límite definido
+          
+          const porcentaje = (gastado / limite) * 100;
+          const ancho = Math.min(porcentaje, 100); // Para que la barra no se salga del contenedor
+          
+          let colorBarra = 'var(--success)';
+          if (porcentaje > 75 && porcentaje <= 90) colorBarra = 'var(--warning)';
+          if (porcentaje > 90) colorBarra = 'var(--danger)';
+
+          return `
+            <div class="progress-item">
+              <div class="progress-header">
+                <span style="color:var(--text);">${cat.nombre}</span>
+                <span style="color:${colorBarra};">${Math.round(porcentaje)}%</span>
+              </div>
+              <div class="progress-bar-bg">
+                <div class="progress-bar-fill" style="width: ${ancho}%; background-color: ${colorBarra};"></div>
+              </div>
+              <div class="progress-labels">
+                <span>Gastado: ${formatearMoneda(gastado)}</span>
+                <span>Límite: ${formatearMoneda(limite)}</span>
+              </div>
+            </div>
+          `;
+        }).join('');
+
+        const contProgreso = document.getElementById('contenedorProgreso');
+        contProgreso.innerHTML = htmlBarras || '<p style="font-size:0.8rem; color:gray; text-align:center;">Asigna un límite a tus partidas de gasto abajo para ver tu progreso mensual.</p>';
+
+
+        // GRÁFICAS DE PASTEL
         if (miGraficaCat) miGraficaCat.destroy();
         miGraficaCat = new Chart(document.getElementById('graficaCategorias').getContext('2d'), { type: 'doughnut', data: { labels: Object.keys(gasCat), datasets: [{ data: Object.values(gasCat), backgroundColor: ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'] }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: {font:{size:10}} } } } });
 
         if (miGraficaPers) miGraficaPers.destroy();
         miGraficaPers = new Chart(document.getElementById('graficaPersonas').getContext('2d'), { type: 'pie', data: { labels: Object.keys(gasPers), datasets: [{ data: Object.values(gasPers), backgroundColor: ['#f43f5e', '#0ea5e9', '#14b8a6', '#f59e0b'] }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: {font:{size:10}} } } } });
 
-        // MATEMÁTICA 4: AGRUPACIÓN HISTÓRICA MENSUAL PARA LA NUEVA GRÁFICA
+        // GRÁFICA HISTÓRICA
         const mesesEvolucion = {};
         movs.forEach(m => {
           const fechaObj = new Date(m.fecha);
           const mesAnio = fechaObj.toLocaleDateString('es-CO', { month: 'short', year: 'numeric' }).toUpperCase();
           if (!mesesEvolucion[mesAnio]) mesesEvolucion[mesAnio] = { ingresos: 0, gastos: 0 };
-          
-          if (m.tipo === 'Ingreso') { mesesEvolucion[mesAnio].ingresos += Number(m.monto); } 
-          else { mesesEvolucion[mesAnio].gastos += Number(m.monto); }
+          if (m.tipo === 'Ingreso') { mesesEvolucion[mesAnio].ingresos += Number(m.monto); } else { mesesEvolucion[mesAnio].gastos += Number(m.monto); }
         });
-
-        // Supabase nos da los datos del más nuevo al más viejo, para la gráfica queremos el orden cronológico (izquierda a derecha)
         const etiquetasMeses = Object.keys(mesesEvolucion).reverse();
         const datosIngresos = etiquetasMeses.map(mes => mesesEvolucion[mes].ingresos);
         const datosGastos = etiquetasMeses.map(mes => mesesEvolucion[mes].gastos);
 
         if (miGraficaEvolucion) miGraficaEvolucion.destroy();
-        miGraficaEvolucion = new Chart(document.getElementById('graficaEvolucion').getContext('2d'), {
-          type: 'bar',
-          data: {
-            labels: etiquetasMeses,
-            datasets: [
-              { label: 'Ingresos', data: datosIngresos, backgroundColor: '#10b981', borderRadius: 4 },
-              { label: 'Gastos', data: datosGastos, backgroundColor: '#ef4444', borderRadius: 4 }
-            ]
-          },
-          options: { 
-            responsive: true, maintainAspectRatio: false, 
-            plugins: { legend: { position: 'top' } },
-            scales: { y: { beginAtZero: true } }
-          }
-        });
+        miGraficaEvolucion = new Chart(document.getElementById('graficaEvolucion').getContext('2d'), { type: 'bar', data: { labels: etiquetasMeses, datasets: [ { label: 'Ingresos', data: datosIngresos, backgroundColor: '#10b981', borderRadius: 4 }, { label: 'Gastos', data: datosGastos, backgroundColor: '#ef4444', borderRadius: 4 } ] }, options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } } } });
 
-        // RENDERIZADO DE CUENTAS GLOBALES
+        // CUENTAS Y MOVIMIENTOS RECIENTES
         const ing = movs.filter(m=>m.tipo==='Ingreso'); const gas = movs.filter(m=>m.tipo==='Gasto');
         document.getElementById('contenedorCuentas').innerHTML = ['Efectivo', 'Cuenta Bancaria', 'Billetera Digital'].map(cta => {
           const s = ing.filter(m=>m.cuenta===cta).reduce((a,b)=>a+Number(b.monto),0) - gas.filter(m=>m.cuenta===cta).reduce((a,b)=>a+Number(b.monto),0);
           return `<div class="account-pill"><div style="font-size:0.7rem; color:#1e40af; font-weight:600;">${cta}</div><div style="font-weight:bold; color:${s<0?'var(--danger)':'#1e3a8a'}">${formatearMoneda(s)}</div></div>`;
         }).join('');
 
-        // RENDERIZADO DE MOVIMIENTOS RECIENTES
         document.getElementById('listaMovimientos').innerHTML = movs.slice(0,10).map(m => {
           const esI = m.tipo==='Ingreso';
           return `<li class="mov-item ${m.tipo.toLowerCase()}"><div><span style="font-weight:600; font-size:0.95rem;">${m.descripcion}</span><span style="font-size:0.75rem; color:gray; display:block;">${esI?'Aporte':m.categoria} • <b>${m.persona}</b> • ${m.cuenta}</span></div><div style="text-align:right"><div style="font-weight:700; color:${esI?'var(--success)':'#111827'}">${esI?'+':'-'}${formatearMoneda(m.monto)}</div><button style="background:none; border:none; color:red; text-decoration:underline; cursor:pointer; font-size:0.75rem; padding:0; margin-top:4px;" onclick="eliminarMovimiento(${m.id})">Eliminar</button></div></li>`;
