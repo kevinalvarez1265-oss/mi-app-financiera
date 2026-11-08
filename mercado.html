@@ -2,428 +2,703 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Mercado Inteligente (IA)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Mercado en Pareja - Matriz Comparativa</title>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
-    :root { --bg: #f3f4f6; --card-bg: #ffffff; --primary: #0066ff; --text: #1f2937; --border: #e5e7eb; --success: #10b981; --danger: #ef4444; }
-    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, sans-serif; }
-    body { background-color: var(--bg); color: var(--text); padding: 20px 12px; }
-    .container { max-width: 650px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px; }
-    
-    header { display: flex; justify-content: space-between; align-items: center; }
-    header h1 { font-size: 1.4rem; color: #111827; }
-    .btn-nav { background: #e0ecfb; color: var(--primary); border: none; padding: 6px 12px; border-radius: 6px; font-size: 0.85rem; font-weight: 600; text-decoration: none;}
-    .btn-config { background: #f3f4f6; border: 1px solid #cbd5e1; padding: 6px; border-radius: 6px; cursor: pointer; font-size: 1rem; }
-    
-    .card { background: var(--card-bg); border-radius: 12px; padding: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); border: 1px solid var(--border); }
-    .card-title { font-size: 1.1rem; font-weight: 700; margin-bottom: 12px; }
-    
-    /* MODAL CONFIGURACIÓN IA */
-    #modalConfig { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center;}
-    .modal-content { background: white; padding: 20px; border-radius: 12px; width: 90%; max-width: 400px;}
-    
-    .execution-summary { display: flex; justify-content: space-between; background: #f8fafc; border: 1px solid var(--border); border-radius: 8px; padding: 10px; margin-bottom: 15px;}
-    .execution-item { display: flex; flex-direction: column; align-items: center; flex: 1;}
-    .execution-label { font-size: 0.7rem; color: gray; font-weight: bold; text-transform: uppercase;}
-    .execution-value { font-weight: bold; font-size: 1.1rem;}
+    :root {
+      --bg: #f3f4f6;
+      --card-bg: #ffffff;
+      --primary: #0066ff;
+      --text: #1f2937;
+      --border: #e5e7eb;
+      --success: #10b981;
+      --danger: #ef4444;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    body { background-color: var(--bg); color: var(--text); padding: 12px 10px 45px 10px; }
+    .container { max-width: 760px; margin: 0 auto; display: flex; flex-direction: column; gap: 14px; }
 
-    /* CALCULADORA CON IA */
-    .supermarket-panel { border: 2px solid #166534; background: #f0fdf4; position: sticky; top: 10px; z-index: 100;}
-    .supermarket-title { color: #166534; font-size: 1.1rem; font-weight: 800; display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;}
-    .form-row { display: flex; gap: 8px; width: 100%; margin-bottom: 10px;}
-    .form-row > div { flex: 1; display: flex; flex-direction: column; gap: 4px; }
-    .form-row label { font-size: 0.8rem; font-weight: bold; color: #166534; }
-    .big-input { padding: 10px; font-size: 1rem; font-weight: bold; border-radius: 8px; border: 1px solid #86efac; outline: none; width: 100%;}
-    .big-btn { background: #166534; color: white; border: none; padding: 12px; border-radius: 8px; font-size: 1rem; font-weight: bold; cursor: pointer; width: 100%; transition: background 0.2s;}
-    
-    .btn-ia { background: #8b5cf6; color: white; border: none; padding: 6px 12px; border-radius: 6px; font-size: 0.85rem; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 6px; box-shadow: 0 2px 4px rgba(139, 92, 246, 0.3);}
-    #ia-status { font-size: 0.75rem; color: #8b5cf6; font-weight: bold; display: none; text-align: center; margin-bottom: 8px;}
+    header { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; }
+    header h1 { font-size: 1.25rem; color: #111827; font-weight: 800; }
+    .btn-nav { background: #e0ecfb; color: var(--primary); border: none; padding: 8px 12px; border-radius: 8px; font-size: 0.85rem; font-weight: 700; text-decoration: none; }
 
-    .chart-container { position: relative; height: 180px; width: 100%; margin-bottom: 15px; }
+    /* Barra de estado para saber si todo está conectado o si ocurrió un error */
+    .status-bar { font-size: 0.8rem; padding: 8px 12px; border-radius: 8px; font-weight: 600; display: none; }
+    .status-ok { display: block; background: #dcfce7; color: #166534; border: 1px solid #86efac; }
+    .status-err { display: block; background: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; }
+
+    .card { background: var(--card-bg); border-radius: 14px; padding: 14px; box-shadow: 0 2px 6px rgba(0,0,0,0.05); border: 1px solid var(--border); }
+    .card-title { font-size: 1.05rem; font-weight: 800; margin-bottom: 10px; color: #111827; display: flex; justify-content: space-between; align-items: center; }
+
+    /* Caja de total en la calculadora */
+    .budget-box { background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%); border: 1px solid #bfdbfe; border-radius: 10px; padding: 14px; text-align: center; margin-bottom: 12px; }
+    .budget-title { font-size: 0.78rem; color: #1e40af; font-weight: 800; text-transform: uppercase; }
+    .budget-amount { font-size: 2rem; font-weight: 900; color: #1e3a8a; margin-top: 2px; }
+    .saving-badge { background: #dcfce7; color: #166534; padding: 4px 10px; border-radius: 12px; font-size: 0.78rem; font-weight: 700; display: inline-block; margin-top: 6px; }
+
+    /* Dos seleccionadores automáticos (Tienda + Producto -> directo a la calculadora) */
+    .quick-box { background: #f0fdf4; border: 2px solid #86efac; border-radius: 10px; padding: 12px; margin-bottom: 14px; }
+    .quick-label { font-size: 0.82rem; font-weight: 800; color: #166534; margin-bottom: 8px; display: block; }
+    .quick-selects { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    @media (max-width: 500px) { .quick-selects { grid-template-columns: 1fr; } }
+
+    select, input, button { padding: 10px; border-radius: 8px; border: 1px solid #cbd5e1; font-size: 0.92rem; outline: none; }
+    select:focus, input:focus { border-color: var(--primary); }
+    .btn-primary { background: var(--primary); color: #fff; font-weight: 700; border: none; cursor: pointer; }
+    .btn-success { background: var(--success); color: #fff; font-weight: 700; border: none; cursor: pointer; }
+
+    /* Lista del Carrito / Calculadora */
     .item-list { list-style: none; display: flex; flex-direction: column; gap: 10px; }
-    .item, .checklist-item { background: #fff; border: 1px solid var(--border); border-radius: 8px; padding: 12px; }
-    
-    .checklist-item { display: flex; flex-direction: column; gap: 8px; border: 1px solid var(--border); border-radius: 8px; padding: 12px; background: #fff;}
-    .checklist-header { display: flex; justify-content: space-between; align-items: flex-start;}
-    .checklist-title { font-weight: 700; font-size: 1.05rem; color: #111827; }
-    .checklist-est { font-size: 0.8rem; color: gray; margin-top: 2px;}
-    
-    .ejecucion-box { border-radius: 6px; padding: 8px; font-size: 0.85rem; display: flex; justify-content: space-between; align-items: center; margin-top: 6px;}
-    .box-pendiente { background: #f8fafc; border: 1px dashed #cbd5e1; }
-    .box-ahorro { background: #dcfce7; border: 1px solid #bbf7d0; color: #166534; font-weight: bold;}
-    .box-sobrecosto { background: #fee2e2; border: 1px solid #fecaca; color: #991b1b; font-weight: bold;}
-    
-    .btn-fast-load { background: #dbeafe; color: var(--primary); border: 1px solid #bfdbfe; padding: 6px 12px; border-radius: 6px; font-size: 0.8rem; font-weight: bold; cursor: pointer;}
-    .btn-remove { background: none; border: none; color: var(--danger); font-size: 1.2rem; cursor: pointer; padding:0 5px;}
-    
-    form { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px;}
-    input, select, button { padding: 8px; border-radius: 6px; border: 1px solid var(--border); outline: none; }
-    button.btn-primary { background: var(--primary); color: #fff; font-weight: 600; border: none; cursor: pointer; }
-    .history-row { display: flex; justify-content: space-between; align-items:center; padding: 8px; border-bottom: 1px solid #f3f4f6; font-size: 0.85rem; background: #f8fafc; margin-bottom:4px; border-radius:4px;}
+    .checklist-item { background: #fff; border: 1px solid var(--border); border-radius: 10px; padding: 12px; display: flex; gap: 10px; align-items: flex-start; border-left: 5px solid var(--primary); }
+    .checklist-item.inactivo { opacity: 0.55; background: #f8fafc; border-left-color: #94a3b8; }
+    .checkbox { width: 22px; height: 22px; margin-top: 4px; cursor: pointer; }
+    .checklist-info { flex: 1; display: flex; flex-direction: column; gap: 8px; }
+
+    /* Controles grandes de unidades (- 1 +) para celular */
+    .qty-controls { display: flex; align-items: center; gap: 6px; background: #eff6ff; padding: 4px 8px; border-radius: 8px; border: 1px solid #bfdbfe; }
+    .btn-qty { background: var(--primary); color: white; border: none; width: 32px; height: 32px; border-radius: 6px; font-size: 1.1rem; font-weight: 900; cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 0; }
+    .input-qty { width: 48px; padding: 4px; text-align: center; font-weight: 800; font-size: 0.95rem; border: 1px solid #93c5fd; border-radius: 6px; background: #fff; }
+
+    .select-tienda { width: 100%; background: #f8fafc; font-size: 0.85rem; padding: 8px; }
+    .btn-remove { background: #fee2e2; border: none; color: var(--danger); width: 28px; height: 28px; border-radius: 6px; font-size: 1.1rem; font-weight: bold; cursor: pointer; padding: 0; }
+    .btn-buy { background: var(--success); color: white; border: none; padding: 10px; border-radius: 8px; font-size: 0.88rem; font-weight: 800; cursor: pointer; width: 100%; }
+
+    /* Cajas de control de la Matriz */
+    .panel-box { background: #f8fafc; border: 1px solid var(--border); border-radius: 10px; padding: 12px; margin-bottom: 12px; }
+    .panel-title { font-size: 0.8rem; font-weight: 800; color: #1e293b; text-transform: uppercase; margin-bottom: 8px; display: block; }
+    .grid-2col { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .grid-precio { display: grid; grid-template-columns: 1fr 1fr 110px auto; gap: 8px; }
+    @media (max-width: 580px) {
+      .grid-2col { grid-template-columns: 1fr; }
+      .grid-precio { grid-template-columns: 1fr 1fr; }
+      .grid-precio input, .grid-precio button { grid-column: span 2; }
+    }
+
+    /* ESTILOS DE LA MATRIZ RESPONSIVA PARA CELULAR */
+    .matrix-legend { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 6px; font-size: 0.78rem; color: #4b5563; margin-bottom: 8px; }
+    .badge-best { background: #dcfce7; color: #166534; padding: 3px 8px; border-radius: 6px; font-weight: 800; }
+
+    .matrix-scroll { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; border: 2px solid #cbd5e1; border-radius: 10px; background: #fff; }
+    table.matrix-table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 0.85rem; }
+    table.matrix-table th, table.matrix-table td { border-bottom: 1px solid var(--border); border-right: 1px solid var(--border); padding: 8px 6px; text-align: center; vertical-align: middle; }
+    table.matrix-table th { background: #f1f5f9; color: #0f172a; font-weight: 800; white-space: nowrap; padding: 10px 8px; }
+
+    /* Columna fija a la izquierda (Sticky) para ver siempre el nombre del producto en el celular */
+    table.matrix-table th.sticky-col,
+    table.matrix-table td.sticky-col {
+      position: sticky;
+      left: 0;
+      z-index: 2;
+      background: #ffffff;
+      text-align: left;
+      min-width: 140px;
+      max-width: 160px;
+      box-shadow: 2px 0 5px rgba(0,0,0,0.06);
+    }
+    table.matrix-table th.sticky-col { background: #e2e8f0; z-index: 3; }
+
+    .cell-cheapest { background-color: #dcfce7 !important; }
+    .cheapest-label { display: block; font-size: 0.68rem; color: #15803d; font-weight: 800; margin-bottom: 3px; }
+    .cell-controls { display: flex; align-items: center; justify-content: center; gap: 4px; min-width: 118px; }
+    .cell-price-input { width: 80px; padding: 6px 4px; text-align: right; font-size: 0.88rem; font-weight: 700; border: 1px solid #94a3b8; border-radius: 6px; background: #fff; }
+    .cell-cheapest .cell-price-input { border-color: #16a34a; background: #f0fdf4; color: #14532d; }
+    .btn-send-cart { background: #e0ecfb; color: var(--primary); border: none; padding: 6px 8px; border-radius: 6px; cursor: pointer; font-size: 0.82rem; font-weight: 800; }
+    .btn-del-row { background: #fee2e2; color: var(--danger); border: none; padding: 4px 6px; border-radius: 4px; font-size: 0.72rem; cursor: pointer; }
+    .btn-del-col { background: none; border: none; color: #ef4444; font-size: 0.75rem; cursor: pointer; margin-left: 4px; font-weight: bold; }
+
+    .chart-container { position: relative; height: 180px; width: 100%; margin: 10px 0; }
+    .history-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 10px; background: #f8fafc; margin-bottom: 4px; border-radius: 6px; font-size: 0.85rem; }
   </style>
 </head>
 <body>
-  
-  <!-- MODAL CONFIGURACIÓN API KEY -->
-  <div id="modalConfig">
-    <div class="modal-content">
-      <h3 style="margin-bottom: 12px;">Configurar Inteligencia Artificial</h3>
-      <p style="font-size: 0.8rem; color: gray; margin-bottom: 12px;">Ingresa tu API Key de Google Gemini. Se guardará localmente en tu celular por seguridad.</p>
-      <input type="password" id="inputApiKey" placeholder="AIzaSy..." style="width: 100%; margin-bottom: 12px; padding: 10px; border-radius: 8px;">
-      <div style="display: flex; justify-content: flex-end; gap: 10px;">
-        <button type="button" onclick="cerrarConfigIA()" style="background: #e5e7eb; border: none;">Cancelar</button>
-        <button type="button" class="btn-primary" onclick="guardarConfigIA()">Guardar</button>
-      </div>
-    </div>
-  </div>
-
   <div class="container">
     <header>
-      <div style="display: flex; gap: 10px; align-items: center;">
-        <h1>Auditoría Mercado</h1>
-        <button class="btn-config" onclick="abrirConfigIA()" title="Configurar IA">⚙️</button>
-      </div>
-      <a href="./" class="btn-nav">💰 Presupuesto</a>
+      <h1>🛒 Mercado en Pareja</h1>
+      <a href="presupuesto.html" class="btn-nav">💰 Ir a Presupuesto</a>
     </header>
 
-    <!-- CALCULADORA RÁPIDA CON CÁMARA IA -->
-    <section class="card supermarket-panel" id="panelCalculadora">
-      <div class="supermarket-title">
-        <span>⚡ Calculadora Rápida</span>
-        
-        <!-- BOTÓN DE IA OCULTO (Abre la cámara) -->
-        <label class="btn-ia" title="Escanear precio con cámara">
-          📸 Escanear
-          <input type="file" accept="image/*" capture="environment" style="display: none;" onchange="procesarFotoConIA(event)">
-        </label>
-      </div>
-      
-      <div id="ia-status">Analizando imagen con IA... ⏳</div>
+    <!-- Mensajes de confirmación o alerta de base de datos -->
+    <div id="barraEstado" class="status-bar"></div>
 
-      <form id="formCompraRapida" onsubmit="procesarCompraRapida(event)">
-        <div style="margin-bottom: 10px;">
-          <select id="calc-item" class="big-input" style="color:var(--primary);" required>
-            <option value="">-- Selecciona producto a registrar --</option>
+    <!-- SECCIÓN 1: MATRIZ COMPARATIVA (PRODUCTOS EN FILAS X TIENDAS EN COLUMNAS) -->
+    <!-- La pusimos de primera para que puedas verla, agregar productos/tiendas y comparar al instante -->
+    <section class="card">
+      <div class="card-title">1. Matriz Comparativa (Filas: Productos | Columnas: Tiendas)</div>
+
+      <!-- PASO A: AGREGAR PRODUCTO (FILA) O TIENDA (COLUMNA) -->
+      <div class="panel-box">
+        <span class="panel-title">➕ Paso 1: Agregar Productos (Filas) y Tiendas (Columnas)</span>
+        <div class="grid-2col">
+          <div style="display:flex; gap:6px;">
+            <input type="text" id="inputNuevoProducto" placeholder="Nombre producto (ej. Leche)" style="flex:1;">
+            <button type="button" class="btn-primary" onclick="crearProducto()">+ Producto</button>
+          </div>
+          <div style="display:flex; gap:6px;">
+            <input type="text" id="inputNuevaTienda" placeholder="Nombre tienda (ej. D1, Olímpica)" style="flex:1;">
+            <button type="button" class="btn-success" onclick="crearTienda()">+ Tienda</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- PASO B: ASIGNAR EL VALOR DEL PRODUCTO EN UNA TIENDA -->
+      <div class="panel-box" style="background:#eff6ff; border-color:#bfdbfe;">
+        <span class="panel-title" style="color:#1e40af;">💲 Paso 2: Asignar o Cambiar el Precio de un Producto</span>
+        <div class="grid-precio">
+          <select id="selPrecioProducto">
+            <option value="">Elige Producto...</option>
+          </select>
+          <select id="selPrecioTienda">
+            <option value="">Elige Tienda...</option>
+          </select>
+          <input type="number" id="inputValorPrecio" placeholder="Precio $ (ej. 4500)" min="0">
+          <button type="button" class="btn-primary" onclick="guardarPrecioDesdeFormulario()">Guardar Precio</button>
+        </div>
+        <p style="font-size:0.75rem; color:#1e3a8a; margin-top:6px;">
+          💡 <strong>Tip:</strong> También puedes escribir o cambiar el precio tocando directamente cualquier casilla dentro de la tabla de abajo.
+        </p>
+      </div>
+
+      <div class="matrix-legend">
+        <span>📱 En celular: desliza la tabla con el dedo hacia los lados.</span>
+        <span class="badge-best">⭐ Verde = Donde es más barato</span>
+      </div>
+
+      <!-- TABLA MATRIZ SIEMPRE VISIBLE -->
+      <div class="matrix-scroll">
+        <table class="matrix-table">
+          <thead id="matrizThead"></thead>
+          <tbody id="matrizTbody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- SECCIÓN 2: CALCULADORA AUTOMÁTICA CON 2 SELECCIONADORES -->
+    <section class="card">
+      <div class="card-title">2. Calculadora de Mercado (Selección Automática)</div>
+
+      <div class="budget-box">
+        <div class="budget-title">Total en tu Carrito Actual</div>
+        <div class="budget-amount" id="presupuestoMixto">$0</div>
+        <div id="etiquetaAhorro"></div>
+      </div>
+
+      <!-- DOS SELECCIONADORES QUE ENVÍAN DIRECTO A LA CALCULADORA -->
+      <div class="quick-box">
+        <span class="quick-label">⚡ Selecciona Tienda y Producto (Se baja automático a la calculadora):</span>
+        <div class="quick-selects">
+          <select id="selTiendaRapida" onchange="seleccionAutomaticaCalculadora()">
+            <option value="">1º Selecciona Tienda...</option>
+          </select>
+          <select id="selProductoRapido" onchange="seleccionAutomaticaCalculadora()">
+            <option value="">2º Selecciona Producto...</option>
           </select>
         </div>
-        <div class="form-row">
-          <div style="flex: 2;">
-            <label>Tienda Física Hoy</label>
-            <input type="text" id="calc-tienda" class="big-input" placeholder="Ej: D1, Éxito" required>
-          </div>
-        </div>
-        <div class="form-row">
-          <div style="flex: 2;">
-            <label>Precio Real Unit. $</label>
-            <input type="number" id="calc-precio" class="big-input" placeholder="0" required>
-          </div>
-          <div style="flex: 1;">
-            <label>Cant. Real</label>
-            <input type="number" id="calc-cant" class="big-input" value="1" min="1" required>
-          </div>
-        </div>
-        <button type="submit" class="big-btn" id="btnProcesarCalc">✅ Guardar Ejecución</button>
-      </form>
-    </section>
-
-    <!-- RESUMEN COMPARATIVO DEL VIAJE -->
-    <section class="card">
-      <div class="card-title">Resumen del Viaje Actual</div>
-      <div class="execution-summary">
-        <div class="execution-item">
-          <span class="execution-label">Planeado</span>
-          <span class="execution-value" style="color: var(--primary);" id="totalEstimado">$0</span>
-        </div>
-        <div class="execution-item" style="border-left: 1px solid var(--border); border-right: 1px solid var(--border);">
-          <span class="execution-label">Ejecutado (Hoy)</span>
-          <span class="execution-value" style="color: var(--text);" id="totalEjecutado">$0</span>
-        </div>
-        <div class="execution-item">
-          <span class="execution-label">Balance</span>
-          <span class="execution-value" id="diferenciaGlobal">$0</span>
-        </div>
+        <div id="mensajeRapido" style="font-size:0.8rem; color:#15803d; margin-top:6px; font-weight:700;"></div>
       </div>
-      <div class="chart-container"><canvas id="graficaComparativa"></canvas></div>
-    </section>
 
-    <!-- LISTA DE EJECUCIÓN -->
-    <section class="card">
-      <div class="card-title">🛒 Mi Carrito (Contraste)</div>
+      <div class="card-title" style="font-size:0.95rem;">
+        <span>🛒 Tu Lista en la Calculadora (Solo toca − o + para las unidades)</span>
+      </div>
       <ul class="item-list" id="contenedorChecklist"></ul>
+
+      <div style="margin-top:16px;">
+        <div style="font-size:0.82rem; font-weight:700; color:#4b5563;">Comparación total de tu carrito por tienda:</div>
+        <div class="chart-container"><canvas id="graficaComparativa"></canvas></div>
+      </div>
     </section>
 
-    <!-- CATÁLOGO MAESTRO -->
+    <!-- SECCIÓN 3: HISTÓRICO MENSUAL -->
     <section class="card">
-      <div class="card-title">Catálogo Maestro</div>
-      <form id="formNuevoProducto">
-        <input type="text" id="nombreProducto" placeholder="Añadir producto" style="flex:1" required>
-        <button type="submit" class="btn-primary">Añadir</button>
-      </form>
-      <ul class="item-list" id="contenedorCatalogo"></ul>
+      <div class="card-title">3. Histórico de Gasto Real por Mes</div>
+      <div class="chart-container"><canvas id="graficaHistorico"></canvas></div>
+      <div id="listaHistoricoMensual" style="margin-top: 8px;"></div>
     </section>
   </div>
 
   <script>
-    // ================= CONEXIÓN SUPABASE =================
+    // =========================================================================
+    // CONFIGURACIÓN DE SUPABASE (Tus credenciales ya conectadas)
+    // =========================================================================
     const SUPABASE_URL = "https://xqowrstjyzlyrczifmca.supabase.co";
     const SUPABASE_KEY = "sb_publishable_g0m2XAZRFxKXOfJh8ejKVg_FfsWXly-";
-    let clienteSupabase;
-    try { clienteSupabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY); } 
-    catch (e) { alert("Error iniciando Supabase: " + e.message); }
+    const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-    if (!localStorage.getItem('app_hogar_sesion_activa')) { window.location.href = './'; }
-    const formatearMoneda = (n) => new Intl.NumberFormat('es-CO', {style:'currency',currency:'COP',maximumFractionDigits:0}).format(n);
+    // Garantizamos que la sesión esté activa para que nunca te redirija ni bloquee la pantalla
+    localStorage.setItem('app_hogar_sesion_activa', 'true');
+
+    const formatearMoneda = (n) => new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(n || 0);
+    
     let chartMercado = null;
+    let chartHistorico = null;
+    let catalogoGlobal = [];
+    let checkPendGlobal = [];
 
-    // ================= INTELIGENCIA ARTIFICIAL (GEMINI VISION) =================
-    function abrirConfigIA() { 
-      document.getElementById('inputApiKey').value = localStorage.getItem('gemini_api_key_hogar') || '';
-      document.getElementById('modalConfig').style.display = 'flex'; 
-    }
-    function cerrarConfigIA() { document.getElementById('modalConfig').style.display = 'none'; }
-    function guardarConfigIA() {
-      const key = document.getElementById('inputApiKey').value.trim();
-      if(key) { localStorage.setItem('gemini_api_key_hogar', key); alert("Llave guardada en el dispositivo."); }
-      cerrarConfigIA();
-    }
+    // Lista inicial de tiendas (columnas de la matriz) guardada en el navegador + las de Supabase
+    let tiendasColumnas = JSON.parse(localStorage.getItem('mis_tiendas_matriz') || '["D1", "Ara", "Éxito"]');
 
-    async function procesarFotoConIA(evento) {
-      const apiKey = localStorage.getItem('gemini_api_key_hogar');
-      if (!apiKey) { alert("¡Primero debes configurar tu API Key tocando el botón ⚙️ arriba!"); return; }
-      
-      const archivo = evento.target.files[0];
-      if (!archivo) return;
-
-      const iaStatus = document.getElementById('ia-status');
-      iaStatus.style.display = 'block';
-      iaStatus.textContent = "Analizando etiqueta con IA... 📸⏳";
-
-      try {
-        // 1. Convertir la foto a formato Base64 para poder enviarla a Google
-        const reader = new FileReader();
-        reader.readAsDataURL(archivo);
-        
-        reader.onload = async () => {
-          const base64Photo = reader.result.split(',')[1]; // Extraer solo la data pura
-
-          // 2. Construir el Prompt para Gemini
-          const peticion = {
-            contents: [{
-              parts: [
-                { text: "Eres un asistente de compras. Mira esta foto de una etiqueta de supermercado. Extrae únicamente el precio del producto y devuelve SOLAMENTE EL NÚMERO entero sin puntos ni comas ni símbolos (Ej: si dice $ 4.500, responde 4500)." },
-                { inlineData: { mimeType: archivo.type, data: base64Photo } }
-              ]
-            }]
-          };
-
-          // 3. Llamar a la API de Google Gemini Pro Vision
-          const respuesta = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(peticion)
-          });
-
-          const datos = await respuesta.json();
-          
-          if (datos.error) { throw new Error(datos.error.message); }
-
-          // 4. Leer la respuesta e insertar en la calculadora
-          let precioExtraido = datos.candidates[0].content.parts[0].text.trim();
-          precioExtraido = precioExtraido.replace(/[^0-9]/g, ''); // Limpiar si la IA envió símbolos extra
-          
-          if (precioExtraido) {
-            document.getElementById('calc-precio').value = precioExtraido;
-            iaStatus.textContent = `¡Listo! Precio detectado: $${precioExtraido} ✨`;
-            setTimeout(() => iaStatus.style.display = 'none', 3000);
-          } else {
-            iaStatus.textContent = "La IA no logró detectar un precio claro. Intenta de nuevo.";
-            setTimeout(() => iaStatus.style.display = 'none', 4000);
-          }
-        };
-      } catch (error) {
-        console.error(error);
-        iaStatus.textContent = "Error de conexión con la IA.";
-        setTimeout(() => iaStatus.style.display = 'none', 3000);
+    // Función para mostrar avisos claros arriba en la pantalla
+    function mostrarAviso(texto, esError = false) {
+      const barra = document.getElementById('barraEstado');
+      barra.textContent = texto;
+      barra.className = 'status-bar ' + (esError ? 'status-err' : 'status-ok');
+      if (!esError) {
+        setTimeout(() => { barra.style.display = 'none'; }, 4000);
+      } else {
+        barra.style.display = 'block';
       }
     }
 
+    function limpiarNombreTienda(txt) {
+      const limpio = (txt || '').trim();
+      if (!limpio) return '';
+      return limpio.charAt(0).toUpperCase() + limpio.slice(1).toLowerCase();
+    }
 
-    // --- FUNCIONES CATÁLOGO Y CARRITO ---
-    document.getElementById('formNuevoProducto').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      await clienteSupabase.from('productos_mercado').insert([{ nombre: document.getElementById('nombreProducto').value.trim() }]);
-      document.getElementById('nombreProducto').value = ''; renderApp();
-    });
+    // =========================================================================
+    // 1. CREAR PRODUCTO (NUEVA FILA EN LA MATRIZ)
+    // =========================================================================
+    async function crearProducto() {
+      const input = document.getElementById('inputNuevoProducto');
+      const nombre = input.value.trim();
+      if (!nombre) return alert("Escribe el nombre del producto (ej. Arroz, Huevos, Leche).");
+
+      const { error } = await supabaseClient
+        .from('productos_mercado')
+        .insert([{ nombre: nombre, historial_precios: [] }]);
+
+      if (error) {
+        mostrarAviso("⚠️ Error en Supabase al crear producto: " + error.message + ". Asegúrate de ejecutar el script SQL de la Fase 2.", true);
+        return;
+      }
+
+      input.value = '';
+      mostrarAviso(`✅ Producto "${nombre}" agregado como nueva fila en la matriz.`);
+      await cargarYRenderizar();
+    }
+
+    // =========================================================================
+    // 2. CREAR TIENDA (NUEVA COLUMNA EN LA MATRIZ)
+    // =========================================================================
+    function crearTienda() {
+      const input = document.getElementById('inputNuevaTienda');
+      const nuevaTienda = limpiarNombreTienda(input.value);
+      if (!nuevaTienda) return alert("Escribe el nombre de la tienda (ej. D1, Ara, Ísimo).");
+
+      const yaExiste = tiendasColumnas.some(t => t.toLowerCase() === nuevaTienda.toLowerCase());
+      if (!yaExiste) {
+        tiendasColumnas.push(nuevaTienda);
+        localStorage.setItem('mis_tiendas_matriz', JSON.stringify(tiendasColumnas));
+      }
+
+      input.value = '';
+      mostrarAviso(`🏪 Tienda "${nuevaTienda}" agregada como nueva columna en la matriz.`);
+      cargarYRenderizar();
+    }
+
+    function eliminarColumnaTienda(nombreTienda) {
+      if (!confirm(`¿Ocultar la columna de la tienda "${nombreTienda}"?`)) return;
+      tiendasColumnas = tiendasColumnas.filter(t => t.toLowerCase() !== nombreTienda.toLowerCase());
+      localStorage.setItem('mis_tiendas_matriz', JSON.stringify(tiendasColumnas));
+      cargarYRenderizar();
+    }
+
+    // =========================================================================
+    // 3. ASIGNAR O ACTUALIZAR PRECIO (DESDE FORMULARIO O DESDE LA MATRIZ)
+    // =========================================================================
+    async function guardarPrecioDesdeFormulario() {
+      const prodId = parseInt(document.getElementById('selPrecioProducto').value);
+      const tienda = document.getElementById('selPrecioTienda').value;
+      const valor = parseFloat(document.getElementById('inputValorPrecio').value);
+
+      if (isNaN(prodId)) return alert("Selecciona un Producto de la lista.");
+      if (!tienda) return alert("Selecciona una Tienda de la lista.");
+      if (isNaN(valor) || valor < 0) return alert("Escribe un precio válido.");
+
+      await guardarPrecioEnMatriz(prodId, tienda, valor);
+      document.getElementById('inputValorPrecio').value = '';
+    }
+
+    async function guardarPrecioEnMatriz(productoId, tienda, valorPrecio) {
+      const precioNum = parseFloat(valorPrecio);
+      const prod = catalogoGlobal.find(x => x.id === productoId);
+      if (!prod) return;
+
+      let historial = Array.isArray(prod.historial_precios) ? [...prod.historial_precios] : [];
+      const idx = historial.findIndex(h => (h.tienda || '').toLowerCase() === tienda.toLowerCase());
+
+      if (isNaN(precioNum) || precioNum <= 0) {
+        if (idx >= 0) historial.splice(idx, 1);
+      } else {
+        if (idx >= 0) {
+          historial[idx].precio = precioNum;
+        } else {
+          historial.push({ tienda: tienda, precio: precioNum });
+        }
+      }
+
+      const { error } = await supabaseClient
+        .from('productos_mercado')
+        .update({ historial_precios: historial })
+        .eq('id', productoId);
+
+      if (error) {
+        mostrarAviso("⚠️ No se pudo guardar el precio: " + error.message, true);
+        return;
+      }
+
+      // Si el producto ya está en la calculadora con esa tienda, actualizamos su precio automáticamente
+      const itemEnCarrito = checkPendGlobal.find(
+        c => c.producto_id === productoId && (c.tienda_seleccionada || '').toLowerCase() === tienda.toLowerCase()
+      );
+      if (itemEnCarrito && !isNaN(precioNum) && precioNum > 0) {
+        await supabaseClient
+          .from('checklist_mercado')
+          .update({ precio_seleccionado: precioNum })
+          .eq('id', itemEnCarrito.id);
+      }
+
+      mostrarAviso(`💲 Precio de "${prod.nombre}" en ${tienda} actualizado a ${formatearMoneda(precioNum)}.`);
+      await cargarYRenderizar();
+    }
+
+    // =========================================================================
+    // 4. SELECCIÓN AUTOMÁTICA (TIENDA + PRODUCTO -> DIRECTO A CALCULADORA)
+    // =========================================================================
+    async function seleccionAutomaticaCalculadora() {
+      const tienda = document.getElementById('selTiendaRapida').value;
+      const prodId = parseInt(document.getElementById('selProductoRapido').value);
+      const msg = document.getElementById('mensajeRapido');
+
+      // Cuando ambos seleccionadores tienen un valor, se dispara automáticamente
+      if (!tienda || isNaN(prodId)) return;
+
+      await enviarProductoACalculadora(prodId, tienda);
+
+      const prod = catalogoGlobal.find(x => x.id === prodId);
+      msg.textContent = `✅ "${prod ? prod.nombre : 'Producto'}" (${tienda}) agregado abajo. ¡Solo ajusta las unidades!`;
+
+      // Dejamos la tienda seleccionada y reiniciamos solo el selector de producto
+      document.getElementById('selProductoRapido').value = "";
+    }
+
+    async function enviarProductoACalculadora(productoId, tienda) {
+      const prod = catalogoGlobal.find(x => x.id === productoId);
+      if (!prod) return;
+
+      const historial = Array.isArray(prod.historial_precios) ? prod.historial_precios : [];
+      const reg = historial.find(h => (h.tienda || '').toLowerCase() === tienda.toLowerCase());
+      const precio = reg ? reg.precio : 0;
+
+      const existente = checkPendGlobal.find(i => i.producto_id === productoId);
+
+      if (existente) {
+        await supabaseClient.from('checklist_mercado').update({
+          tienda_seleccionada: tienda,
+          precio_seleccionado: precio,
+          activo: true
+        }).eq('id', existente.id);
+      } else {
+        await supabaseClient.from('checklist_mercado').insert([{
+          producto_id: productoId,
+          tienda_seleccionada: tienda,
+          precio_seleccionado: precio,
+          cantidad: 1,
+          activo: true
+        }]);
+      }
+
+      mostrarAviso(`🛒 "${prod.nombre}" (${tienda}) enviado a la calculadora.`);
+      await cargarYRenderizar();
+    }
+
+    // =========================================================================
+    // 5. FUNCIONES DEL CARRITO / CALCULADORA
+    // =========================================================================
+    async function cambiarCantidad(id, nuevaCant) {
+      const c = Math.max(1, parseInt(nuevaCant) || 1);
+      await supabaseClient.from('checklist_mercado').update({ cantidad: c }).eq('id', id);
+      cargarYRenderizar();
+    }
+
+    async function cambiarTiendaItemCarrito(id, valor) {
+      const [t, p] = valor.split('|');
+      await supabaseClient.from('checklist_mercado').update({
+        tienda_seleccionada: t,
+        precio_seleccionado: parseFloat(p) || 0
+      }).eq('id', id);
+      cargarYRenderizar();
+    }
+
+    async function toggleActivo(id, actual) {
+      await supabaseClient.from('checklist_mercado').update({ activo: !actual }).eq('id', id);
+      cargarYRenderizar();
+    }
+
+    async function registrarCompra(id, precioSel) {
+      if (precioSel <= 0) {
+        return alert("Este producto tiene precio $0 en esta tienda. Escribe primero su precio en la Matriz de arriba para poder registrarlo en el gasto mensual.");
+      }
+      await supabaseClient.from('checklist_mercado').update({
+        comprado: true,
+        fecha_compra: new Date().toISOString()
+      }).eq('id', id);
+      cargarYRenderizar();
+    }
+
+    async function quitarDelCarrito(id) {
+      await supabaseClient.from('checklist_mercado').delete().eq('id', id);
+      cargarYRenderizar();
+    }
 
     async function eliminarProductoCatalogo(id) {
-      if(confirm('¿Eliminar del catálogo y carrito?')) { await clienteSupabase.from('productos_mercado').delete().eq('id', id); renderApp(); }
+      if (!confirm("¿Seguro que deseas borrar este producto de la matriz?")) return;
+      await supabaseClient.from('productos_mercado').delete().eq('id', id);
+      cargarYRenderizar();
     }
 
-    async function guardarPrecioEstimado(id) {
-      let t = document.getElementById(`tienda-${id}`).value.trim();
-      t = t.charAt(0).toUpperCase() + t.slice(1).toLowerCase(); 
-      const p = parseFloat(document.getElementById(`precio-${id}`).value);
-      if(!t || isNaN(p)) return;
-      const { data: prod } = await clienteSupabase.from('productos_mercado').select('historial_precios').eq('id', id).single();
-      let hist = prod.historial_precios || [];
-      const i = hist.findIndex(h=>h.tienda===t);
-      if(i>=0) hist[i].precio = p; else hist.push({tienda: t, precio: p});
-      await clienteSupabase.from('productos_mercado').update({ historial_precios: hist }).eq('id', id); renderApp();
-    }
+    // =========================================================================
+    // 6. DIBUJAR TODA LA APLICACIÓN (SIEMPRE DIBUJA LA MATRIZ AUNQUE ESTÉ VACÍA)
+    // =========================================================================
+    async function cargarYRenderizar() {
+      let catalogo = [];
+      let checkAll = [];
 
-    async function agregarPlaneado(id) {
-      const { data: prods } = await clienteSupabase.from('productos_mercado').select('*').eq('id', id);
-      await clienteSupabase.from('checklist_mercado').insert([{ 
-        producto_id: id, 
-        tienda_estimada: prods[0].historial_precios[0]?.tienda||"", 
-        precio_estimado: prods[0].historial_precios[0]?.precio||0,
-        cantidad_estimada: 1, activo: true, comprado: false
-      }]);
-      renderApp();
-    }
-
-    async function cambiarBaseEstimada(id, val) {
-      const [t, p] = val.split('|');
-      await clienteSupabase.from('checklist_mercado').update({ tienda_estimada: t, precio_estimado: parseFloat(p) }).eq('id', id); renderApp();
-    }
-
-    async function quitarDelCarrito(id) { 
-      if(confirm('¿Eliminar producto del viaje actual?')) { await clienteSupabase.from('checklist_mercado').delete().eq('id', id); renderApp(); }
-    }
-
-    // --- CALCULADORA (MODO SUPERMERCADO) ---
-    function cargarEnCalculadora(id_checklist, cant_planeada, tienda_planeada) {
-      document.getElementById('calc-item').value = id_checklist;
-      document.getElementById('calc-cant').value = cant_planeada || 1;
-      document.getElementById('calc-tienda').value = tienda_planeada || "";
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    }
-
-    async function procesarCompraRapida(e) {
-      e.preventDefault();
-      const btn = document.getElementById('btnProcesarCalc');
-      btn.disabled = true; btn.textContent = "Guardando...";
-
-      const checklistId = document.getElementById('calc-item').value;
-      const tiendaReal = document.getElementById('calc-tienda').value.trim();
-      const precioReal = parseFloat(document.getElementById('calc-precio').value);
-      const cantReal = parseInt(document.getElementById('calc-cant').value);
-
-      if(!checklistId) { alert("Selecciona un producto."); btn.disabled = false; btn.textContent = "✅ Guardar Ejecución"; return; }
-
-      await clienteSupabase.from('checklist_mercado').update({ 
-        tienda_real: tiendaReal, precio_real: precioReal, cantidad_real: cantReal,
-        comprado: true, fecha_compra: new Date().toISOString() 
-      }).eq('id', checklistId);
-      
-      document.getElementById('formCompraRapida').reset();
-      renderApp();
-      btn.disabled = false; btn.textContent = "✅ Guardar Ejecución";
-    }
-
-    // --- RENDER PRINCIPAL ---
-    async function renderApp() {
-      const { data: catalogo } = await clienteSupabase.from('productos_mercado').select('*').order('id', {ascending:false});
-      const { data: checkAll } = await clienteSupabase.from('checklist_mercado').select('*').order('id', {ascending:false});
-      if(!catalogo || !checkAll) return;
-
-      let planeadoTotal = 0; let ejecutadoTotal = 0;
-      const calcSelect = document.getElementById('calc-item');
-      let optionsHTML = '<option value="">-- Selecciona producto a registrar --</option>';
-
-      document.getElementById('contenedorChecklist').innerHTML = checkAll.map(i => {
-        const p = catalogo.find(x=>x.id===i.producto_id);
-        if(!p) return '';
-        
-        const subtEstimado = (i.precio_estimado || 0) * (i.cantidad_estimada || 1);
-        planeadoTotal += subtEstimado;
-
-        if (!i.comprado) {
-          optionsHTML += `<option value="${i.id}">${p.nombre}</option>`;
-          let opts = p.historial_precios.map(h=>`<option value="${h.tienda}|${h.precio}" ${(h.tienda===i.tienda_estimada && h.precio===i.precio_estimado)?'selected':''}>${h.tienda} - ${formatearMoneda(h.precio)}</option>`).join('');
-          
-          return `
-          <li class="checklist-item">
-            <div class="checklist-header">
-              <div>
-                <div class="checklist-title">${p.nombre}</div>
-                <div class="checklist-est">Planeado: ${formatearMoneda(subtEstimado)} (${i.cantidad_estimada} unds)</div>
-              </div>
-              <button class="btn-remove" onclick="quitarDelCarrito(${i.id})">×</button>
-            </div>
-            <select style="width:100%; font-size:0.8rem; margin-top:4px;" onchange="cambiarBaseEstimada(${i.id}, this.value)">
-              ${opts||'<option value="0|0">Definir precio base...</option>'}
-            </select>
-            <div class="ejecucion-box box-pendiente">
-              <span>⏳ Esperando compra...</span>
-              <button class="btn-fast-load" onclick="cargarEnCalculadora(${i.id}, ${i.cantidad_estimada}, '${i.tienda_estimada}')">⚡ Ejecutar</button>
-            </div>
-          </li>`;
+      try {
+        const resCat = await supabaseClient.from('productos_mercado').select('*').order('nombre', { ascending: true });
+        if (resCat.error) {
+          mostrarAviso("⚠️ Error leyendo productos_mercado: " + resCat.error.message, true);
         } else {
-          const subtReal = (i.precio_real || 0) * (i.cantidad_real || 1);
-          ejecutadoTotal += subtReal;
-          const dif = subtEstimado - subtReal;
-          
-          let estadoClass, estadoText;
-          if (dif >= 0) { estadoClass = 'box-ahorro'; estadoText = `✅ Ahorro: +${formatearMoneda(dif)}`; } 
-          else { estadoClass = 'box-sobrecosto'; estadoText = `⚠️ Sobrecosto: ${formatearMoneda(dif)}`; }
+          catalogo = resCat.data || [];
+        }
+
+        const resCheck = await supabaseClient.from('checklist_mercado').select('*').order('id', { ascending: false });
+        if (!resCheck.error) {
+          checkAll = resCheck.data || [];
+        }
+      } catch (err) {
+        mostrarAviso("⚠️ Error de red conectando a Supabase.", true);
+      }
+
+      catalogoGlobal = catalogo;
+      const checkPend = checkAll.filter(i => !i.comprado);
+      const checkComp = checkAll.filter(i => i.comprado);
+      checkPendGlobal = checkPend;
+
+      // Construir lista única de tiendas (las guardadas + cualquier tienda que venga en los productos de Supabase)
+      const setTiendas = new Set(tiendasColumnas);
+      catalogo.forEach(p => {
+        (p.historial_precios || []).forEach(h => {
+          if (h.tienda) setTiendas.add(limpiarNombreTienda(h.tienda));
+        });
+      });
+      tiendasColumnas = Array.from(setTiendas);
+      localStorage.setItem('mis_tiendas_matriz', JSON.stringify(tiendasColumnas));
+
+      // --- A. LLENAR SELECTORES DE PRECIO Y SELECTORES RÁPIDOS ---
+      const selPrecioProd = document.getElementById('selPrecioProducto');
+      const prevProd = selPrecioProd.value;
+      selPrecioProd.innerHTML = `<option value="">Elige Producto...</option>` +
+        catalogo.map(p => `<option value="${p.id}" ${String(p.id) === prevProd ? 'selected' : ''}>${p.nombre}</option>`).join('');
+
+      const selPrecioTienda = document.getElementById('selPrecioTienda');
+      const prevTiendaPrecio = selPrecioTienda.value;
+      selPrecioTienda.innerHTML = `<option value="">Elige Tienda...</option>` +
+        tiendasColumnas.map(t => `<option value="${t}" ${t === prevTiendaPrecio ? 'selected' : ''}>${t}</option>`).join('');
+
+      const selTiendaRapida = document.getElementById('selTiendaRapida');
+      const prevTiendaRapida = selTiendaRapida.value;
+      selTiendaRapida.innerHTML = `<option value="">1º Selecciona Tienda...</option>` +
+        tiendasColumnas.map(t => `<option value="${t}" ${t === prevTiendaRapida ? 'selected' : ''}>🏪 ${t}</option>`).join('');
+
+      const selProductoRapido = document.getElementById('selProductoRapido');
+      selProductoRapido.innerHTML = `<option value="">2º Selecciona Producto...</option>` +
+        catalogo.map(p => `<option value="${p.id}">📦 ${p.nombre}</option>`).join('');
+
+      // --- B. DIBUJAR MATRIZ COMPARATIVA (PRODUCTOS X TIENDAS) ---
+      const thead = document.getElementById('matrizThead');
+      const tbody = document.getElementById('matrizTbody');
+
+      thead.innerHTML = `
+        <tr>
+          <th class="sticky-col">Producto \\ Tienda</th>
+          ${tiendasColumnas.map(t => `
+            <th>
+              🏪 ${t}
+              <button type="button" class="btn-del-col" onclick="eliminarColumnaTienda('${t}')" title="Quitar columna">×</button>
+            </th>
+          `).join('')}
+        </tr>
+      `;
+
+      if (catalogo.length === 0) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="${tiendasColumnas.length + 1}" style="padding:20px; text-align:center; color:#4b5563;">
+              Aún no hay productos en la matriz. Escribe un producto arriba en el <strong>Paso 1</strong> y pulsa <strong>+ Producto</strong>.
+            </td>
+          </tr>
+        `;
+      } else {
+        tbody.innerHTML = catalogo.map(p => {
+          const hist = Array.isArray(p.historial_precios) ? p.historial_precios : [];
+          const preciosConValor = hist.map(h => Number(h.precio)).filter(v => v > 0);
+          const menorPrecio = preciosConValor.length > 0 ? Math.min(...preciosConValor) : null;
+
+          const celdasHTML = tiendasColumnas.map(tienda => {
+            const reg = hist.find(h => (h.tienda || '').toLowerCase() === tienda.toLowerCase());
+            const valor = reg && reg.precio > 0 ? reg.precio : '';
+            const esElMasBarato = (menorPrecio !== null && Number(valor) === menorPrecio);
+
+            return `
+              <td class="${esElMasBarato ? 'cell-cheapest' : ''}">
+                ${esElMasBarato ? '<span class="cheapest-label">⭐ Más barato</span>' : ''}
+                <div class="cell-controls">
+                  <input type="number" class="cell-price-input" placeholder="$0" value="${valor}"
+                    onchange="guardarPrecioEnMatriz(${p.id}, '${tienda}', this.value)">
+                  <button type="button" class="btn-send-cart" onclick="enviarProductoACalculadora(${p.id}, '${tienda}')" title="Enviar a la calculadora">🛒</button>
+                </div>
+              </td>
+            `;
+          }).join('');
 
           return `
-          <li class="checklist-item" style="border-left-color: gray;">
-            <div class="checklist-header">
-              <div>
-                <div class="checklist-title" style="text-decoration: line-through; color:gray;">${p.nombre}</div>
-                <div class="checklist-est">Tienda Real: <b>${i.tienda_real}</b></div>
-              </div>
-              <button class="btn-remove" onclick="quitarDelCarrito(${i.id})">×</button>
-            </div>
-            <div style="font-size:0.85rem; color:#475569; display:flex; justify-content:space-between; margin-top:4px;">
-              <span>Estimado: ${formatearMoneda(subtEstimado)}</span>
-              <strong>Real: ${formatearMoneda(subtReal)}</strong>
-            </div>
-            <div class="ejecucion-box ${estadoClass}">
-              <span>${estadoText}</span>
-              <button class="btn-fast-load" style="background:transparent; border:none;" onclick="cargarEnCalculadora(${i.id}, ${i.cantidad_real}, '${i.tienda_real}')">⚡</button>
-            </div>
-          </li>`;
-        }
-      }).join('') || '<p style="text-align:center; font-size:0.85rem; color:gray;">Carrito vacío.</p>';
+            <tr>
+              <td class="sticky-col">
+                <div style="display:flex; justify-content:space-between; align-items:center; gap:4px;">
+                  <span style="font-weight:800; color:#111827;">${p.nombre}</span>
+                  <button type="button" class="btn-del-row" onclick="eliminarProductoCatalogo(${p.id})" title="Borrar producto">🗑️</button>
+                </div>
+              </td>
+              ${celdasHTML}
+            </tr>
+          `;
+        }).join('');
+      }
 
-      calcSelect.innerHTML = optionsHTML;
+      // --- C. MATEMÁTICAS DE LA CALCULADORA Y CARRITO ---
+      let mixto = 0;
+      let peorEscenario = 0;
+      let totTienda = {};
 
-      document.getElementById('totalEstimado').textContent = formatearMoneda(planeadoTotal);
-      document.getElementById('totalEjecutado').textContent = formatearMoneda(ejecutadoTotal);
-      
-      const balanceGeneral = planeadoTotal - ejecutadoTotal;
-      const divBalance = document.getElementById('diferenciaGlobal');
-      if (ejecutadoTotal === 0) { divBalance.textContent = "$0"; divBalance.style.color = "gray"; }
-      else if (balanceGeneral >= 0) { divBalance.textContent = `+${formatearMoneda(balanceGeneral)}`; divBalance.style.color = "var(--success)"; }
-      else { divBalance.textContent = formatearMoneda(balanceGeneral); divBalance.style.color = "var(--danger)"; }
+      checkPend.forEach(i => {
+        if (!i.activo) return;
+        const p = catalogo.find(x => x.id === i.producto_id);
+        if (!p) return;
 
-      const ctx = document.getElementById('graficaComparativa').getContext('2d');
-      if(chartMercado) chartMercado.destroy();
-      chartMercado = new Chart(ctx, {
-        type: 'bar',
-        data: { labels: ['Planeado vs Real'], datasets: [
-          { label: 'Presupuesto Planeado', data: [planeadoTotal], backgroundColor: '#0066ff', borderRadius: 4 },
-          { label: 'Gasto Ejecutado', data: [ejecutadoTotal], backgroundColor: (balanceGeneral >= 0) ? '#10b981' : '#ef4444', borderRadius: 4 }
-        ]},
-        options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } } }
+        mixto += (i.precio_seleccionado * i.cantidad);
+        let max = i.precio_seleccionado;
+
+        (p.historial_precios || []).forEach(h => {
+          if (h.precio > max) max = h.precio;
+          if (!totTienda[h.tienda]) totTienda[h.tienda] = 0;
+          totTienda[h.tienda] += (h.precio * i.cantidad);
+        });
+        peorEscenario += (max * i.cantidad);
       });
 
-      document.getElementById('contenedorCatalogo').innerHTML = catalogo.map(p => `
-        <li class="item">
-          <div class="item-header"><span>${p.nombre}</span><button class="btn-delete-master" onclick="eliminarProductoCatalogo(${p.id})">🗑️ Borrar</button></div>
-          <div>${(p.historial_precios||[]).map(h=>`<div class="history-row"><span>${h.tienda}</span><div><strong>${formatearMoneda(h.precio)}</strong></div></div>`).join('')}</div>
-          <div style="display:flex; gap:6px; margin-top:10px;"><input type="text" id="tienda-${p.id}" placeholder="Tienda (Ej. D1)" style="flex:1; padding:8px; border-radius:6px; border:1px solid #e5e7eb;"><input type="number" id="precio-${p.id}" placeholder="Precio Est." style="width:100px; padding:8px; border-radius:6px; border:1px solid #e5e7eb;"><button type="button" class="btn-primary" onclick="guardarPrecioEstimado(${p.id})">Guardar</button></div>
-          <button type="button" onclick="agregarPlaneado(${p.id})" style="width:100%; margin-top:8px; background:#e0ecfb; color:var(--primary); font-weight:bold; border:none; padding:8px; border-radius:6px; cursor:pointer;">🛒 Añadir a Mi Carrito</button>
-        </li>
-      `).join('');
+      document.getElementById('presupuestoMixto').textContent = formatearMoneda(mixto);
+      const ahorro = peorEscenario - mixto;
+      const et = document.getElementById('etiquetaAhorro');
+      if (ahorro > 0 && mixto > 0) {
+        et.innerHTML = `<div class="saving-badge">🌟 Ahorras ${formatearMoneda(ahorro)} comprando inteligente</div>`;
+      } else {
+        et.innerHTML = '';
+      }
+
+      document.getElementById('contenedorChecklist').innerHTML = checkPend.map(i => {
+        const p = catalogo.find(x => x.id === i.producto_id);
+        if (!p) return '';
+        const subtotal = i.precio_seleccionado * i.cantidad;
+        const hist = Array.isArray(p.historial_precios) ? p.historial_precios : [];
+
+        let opts = hist.map(h =>
+          `<option value="${h.tienda}|${h.precio}" ${(h.tienda.toLowerCase() === (i.tienda_seleccionada || '').toLowerCase()) ? 'selected' : ''}>${h.tienda}: ${formatearMoneda(h.precio)} c/u</option>`
+        ).join('');
+
+        if (i.tienda_seleccionada && !hist.some(h => h.tienda.toLowerCase() === i.tienda_seleccionada.toLowerCase())) {
+          opts = `<option value="${i.tienda_seleccionada}|0" selected>${i.tienda_seleccionada}: $0 (Ponle precio en la matriz)</option>` + opts;
+        }
+
+        return `
+          <li class="checklist-item ${!i.activo ? 'inactivo' : ''}">
+            <input type="checkbox" class="checkbox" ${i.activo ? 'checked' : ''} onclick="toggleActivo(${i.id}, ${i.activo})">
+            <div class="checklist-info">
+              <div style="display:flex; justify-content:space-between; align-items:center; gap:6px; flex-wrap:wrap;">
+                <span style="font-weight:800; font-size:1rem;">${p.nombre}</span>
+                <div class="qty-controls">
+                  <button type="button" class="btn-qty" onclick="cambiarCantidad(${i.id}, ${i.cantidad - 1})">−</button>
+                  <input type="number" class="input-qty" min="1" value="${i.cantidad}" onchange="cambiarCantidad(${i.id}, this.value)">
+                  <button type="button" class="btn-qty" onclick="cambiarCantidad(${i.id}, ${i.cantidad + 1})">+</button>
+                </div>
+              </div>
+              <select class="select-tienda" onchange="cambiarTiendaItemCarrito(${i.id}, this.value)">
+                ${opts || '<option value="|0">Sin precios asignados</option>'}
+              </select>
+              <div style="display:flex; justify-content:space-between; align-items:center;">
+                <span style="font-size:0.8rem; color:#4b5563;">Unitario: ${formatearMoneda(i.precio_seleccionado)}</span>
+                <span style="font-size:0.95rem; color:var(--primary); font-weight:900;">Subtotal: ${formatearMoneda(subtotal)}</span>
+              </div>
+              <button type="button" class="btn-buy" onclick="registrarCompra(${i.id}, ${i.precio_seleccionado})">✅ Marcar como Comprado</button>
+            </div>
+            <button type="button" class="btn-remove" onclick="quitarDelCarrito(${i.id})">×</button>
+          </li>
+        `;
+      }).join('') || '<p style="text-align:center; font-size:0.85rem; color:#6b7280; padding:10px;">Tu carrito está vacío. Usa los 2 seleccionadores de arriba o el botón 🛒 en la matriz.</p>';
+
+      // --- D. GRÁFICAS ---
+      const ctx = document.getElementById('graficaComparativa').getContext('2d');
+      if (chartMercado) chartMercado.destroy();
+      chartMercado = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: ['Tu Elección', ...Object.keys(totTienda)],
+          datasets: [{
+            label: 'Total',
+            data: [mixto, ...Object.values(totTienda)],
+            backgroundColor: ['#0066ff', ...Object.keys(totTienda).map(() => '#cbd5e1')],
+            borderRadius: 6
+          }]
+        },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
+      });
+
+      const histPorMes = {};
+      checkComp.forEach(i => {
+        if (!i.fecha_compra) return;
+        const f = new Date(i.fecha_compra);
+        const mesAnio = f.toLocaleDateString('es-CO', { month: 'short', year: 'numeric' }).toUpperCase();
+        if (!histPorMes[mesAnio]) histPorMes[mesAnio] = 0;
+        histPorMes[mesAnio] += (i.precio_seleccionado * i.cantidad);
+      });
+
+      const ctxHist = document.getElementById('graficaHistorico').getContext('2d');
+      if (chartHistorico) chartHistorico.destroy();
+      chartHistorico = new Chart(ctxHist, {
+        type: 'line',
+        data: {
+          labels: Object.keys(histPorMes),
+          datasets: [{
+            label: 'Gasto Real',
+            data: Object.values(histPorMes),
+            borderColor: '#10b981',
+            backgroundColor: 'rgba(16, 185, 129, 0.2)',
+            fill: true,
+            tension: 0.3,
+            pointRadius: 5
+          }]
+        },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
+      });
+
+      document.getElementById('listaHistoricoMensual').innerHTML = Object.keys(histPorMes).length > 0
+        ? Object.keys(histPorMes).map(m => `<div class="history-row"><span>${m}</span><strong style="color:var(--success); font-size:1.05rem;">${formatearMoneda(histPorMes[m])}</strong></div>`).join('')
+        : '<p style="text-align:center; font-size:0.8rem; color:gray;">Aún no hay compras marcadas en el histórico.</p>';
     }
-    
-    renderApp();
+
+    // Iniciar aplicación inmediatamente
+    cargarYRenderizar();
   </script>
 </body>
 </html>
