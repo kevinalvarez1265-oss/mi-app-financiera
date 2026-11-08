@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Mercado en Pareja - Matriz Comparativa</title>
+  <title>Mercado en Pareja - Matriz y Calculadora</title>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
@@ -17,56 +17,61 @@
       --danger: #ef4444;
     }
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-    body { background-color: var(--bg); color: var(--text); padding: 12px 10px 45px 10px; }
-    .container { max-width: 760px; margin: 0 auto; display: flex; flex-direction: column; gap: 14px; }
+    body { background-color: var(--bg); color: var(--text); padding: 12px 10px 50px 10px; }
+    .container { max-width: 780px; margin: 0 auto; display: flex; flex-direction: column; gap: 14px; }
 
     header { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; }
     header h1 { font-size: 1.25rem; color: #111827; font-weight: 800; }
     .btn-nav { background: #e0ecfb; color: var(--primary); border: none; padding: 8px 12px; border-radius: 8px; font-size: 0.85rem; font-weight: 700; text-decoration: none; }
 
-    /* Barra de estado para saber si todo está conectado o si ocurrió un error */
-    .status-bar { font-size: 0.8rem; padding: 8px 12px; border-radius: 8px; font-weight: 600; display: none; }
-    .status-ok { display: block; background: #dcfce7; color: #166534; border: 1px solid #86efac; }
+    .status-toast { font-size: 0.82rem; padding: 10px 12px; border-radius: 8px; font-weight: 700; display: none; position: sticky; top: 8px; z-index: 50; box-shadow: 0 4px 12px rgba(0,0,0,0.12); }
+    .status-ok { display: block; background: #dcfce7; color: #14532d; border: 1px solid #86efac; }
     .status-err { display: block; background: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; }
 
     .card { background: var(--card-bg); border-radius: 14px; padding: 14px; box-shadow: 0 2px 6px rgba(0,0,0,0.05); border: 1px solid var(--border); }
-    .card-title { font-size: 1.05rem; font-weight: 800; margin-bottom: 10px; color: #111827; display: flex; justify-content: space-between; align-items: center; }
+    .card-title { font-size: 1.05rem; font-weight: 800; margin-bottom: 10px; color: #111827; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 6px; }
 
-    /* Caja de total en la calculadora */
-    .budget-box { background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%); border: 1px solid #bfdbfe; border-radius: 10px; padding: 14px; text-align: center; margin-bottom: 12px; }
-    .budget-title { font-size: 0.78rem; color: #1e40af; font-weight: 800; text-transform: uppercase; }
-    .budget-amount { font-size: 2rem; font-weight: 900; color: #1e3a8a; margin-top: 2px; }
-    .saving-badge { background: #dcfce7; color: #166534; padding: 4px 10px; border-radius: 12px; font-size: 0.78rem; font-weight: 700; display: inline-block; margin-top: 6px; }
+    /* Gran Total de la Calculadora */
+    .budget-box { background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%); border: 2px solid #93c5fd; border-radius: 12px; padding: 14px; text-align: center; margin-bottom: 12px; }
+    .budget-title { font-size: 0.8rem; color: #1e40af; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; }
+    .budget-amount { font-size: 2.3rem; font-weight: 900; color: #1e3a8a; margin-top: 2px; }
+    .saving-badge { background: #dcfce7; color: #166534; padding: 4px 10px; border-radius: 12px; font-size: 0.78rem; font-weight: 800; display: inline-block; margin-top: 6px; }
 
-    /* Dos seleccionadores automáticos (Tienda + Producto -> directo a la calculadora) */
-    .quick-box { background: #f0fdf4; border: 2px solid #86efac; border-radius: 10px; padding: 12px; margin-bottom: 14px; }
+    /* Selector Rápido: Tienda + Producto + Unidades */
+    .quick-box { background: #f0fdf4; border: 2px solid #86efac; border-radius: 12px; padding: 12px; margin-bottom: 14px; }
     .quick-label { font-size: 0.82rem; font-weight: 800; color: #166534; margin-bottom: 8px; display: block; }
-    .quick-selects { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-    @media (max-width: 500px) { .quick-selects { grid-template-columns: 1fr; } }
+    .quick-grid { display: grid; grid-template-columns: 1fr 1fr auto; gap: 8px; align-items: center; }
+    @media (max-width: 560px) {
+      .quick-grid { grid-template-columns: 1fr; }
+    }
 
     select, input, button { padding: 10px; border-radius: 8px; border: 1px solid #cbd5e1; font-size: 0.92rem; outline: none; }
     select:focus, input:focus { border-color: var(--primary); }
     .btn-primary { background: var(--primary); color: #fff; font-weight: 700; border: none; cursor: pointer; }
     .btn-success { background: var(--success); color: #fff; font-weight: 700; border: none; cursor: pointer; }
 
-    /* Lista del Carrito / Calculadora */
+    /* Tarjetas dentro de la Calculadora (con botones grandes de Unidades) */
     .item-list { list-style: none; display: flex; flex-direction: column; gap: 10px; }
-    .checklist-item { background: #fff; border: 1px solid var(--border); border-radius: 10px; padding: 12px; display: flex; gap: 10px; align-items: flex-start; border-left: 5px solid var(--primary); }
-    .checklist-item.inactivo { opacity: 0.55; background: #f8fafc; border-left-color: #94a3b8; }
-    .checkbox { width: 22px; height: 22px; margin-top: 4px; cursor: pointer; }
-    .checklist-info { flex: 1; display: flex; flex-direction: column; gap: 8px; }
+    .cart-item { background: #ffffff; border: 2px solid #dbeafe; border-radius: 12px; padding: 12px; display: flex; flex-direction: column; gap: 10px; border-left: 6px solid var(--primary); }
+    .cart-item.inactivo { opacity: 0.55; background: #f8fafc; border-left-color: #94a3b8; border-color: #e2e8f0; }
+    .cart-top { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+    .cart-prod-title { font-weight: 900; font-size: 1.05rem; color: #0f172a; display: flex; align-items: center; gap: 8px; }
+    .checkbox { width: 22px; height: 22px; cursor: pointer; }
 
-    /* Controles grandes de unidades (- 1 +) para celular */
-    .qty-controls { display: flex; align-items: center; gap: 6px; background: #eff6ff; padding: 4px 8px; border-radius: 8px; border: 1px solid #bfdbfe; }
-    .btn-qty { background: var(--primary); color: white; border: none; width: 32px; height: 32px; border-radius: 6px; font-size: 1.1rem; font-weight: 900; cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 0; }
-    .input-qty { width: 48px; padding: 4px; text-align: center; font-weight: 800; font-size: 0.95rem; border: 1px solid #93c5fd; border-radius: 6px; background: #fff; }
+    /* Caja destacada para seleccionar las Unidades */
+    .units-row { display: flex; justify-content: space-between; align-items: center; background: #eff6ff; border: 1px solid #bfdbfe; padding: 8px 10px; border-radius: 10px; flex-wrap: wrap; gap: 8px; }
+    .units-label { font-size: 0.85rem; font-weight: 800; color: #1e40af; }
+    .qty-stepper { display: flex; align-items: center; gap: 6px; }
+    .btn-step { background: var(--primary); color: #fff; border: none; width: 38px; height: 38px; border-radius: 8px; font-size: 1.3rem; font-weight: 900; cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 0; }
+    .btn-step:active { transform: scale(0.93); }
+    .input-qty { width: 58px; height: 38px; padding: 4px; text-align: center; font-weight: 900; font-size: 1.05rem; border: 2px solid var(--primary); border-radius: 8px; background: #fff; color: #111827; }
 
-    .select-tienda { width: 100%; background: #f8fafc; font-size: 0.85rem; padding: 8px; }
-    .btn-remove { background: #fee2e2; border: none; color: var(--danger); width: 28px; height: 28px; border-radius: 6px; font-size: 1.1rem; font-weight: bold; cursor: pointer; padding: 0; }
-    .btn-buy { background: var(--success); color: white; border: none; padding: 10px; border-radius: 8px; font-size: 0.88rem; font-weight: 800; cursor: pointer; width: 100%; }
+    .cart-bottom { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; }
+    .btn-remove { background: #fee2e2; border: none; color: var(--danger); padding: 6px 10px; border-radius: 8px; font-size: 0.85rem; font-weight: 800; cursor: pointer; }
+    .btn-buy { background: var(--success); color: white; border: none; padding: 10px 14px; border-radius: 8px; font-size: 0.9rem; font-weight: 800; cursor: pointer; width: 100%; }
 
-    /* Cajas de control de la Matriz */
-    .panel-box { background: #f8fafc; border: 1px solid var(--border); border-radius: 10px; padding: 12px; margin-bottom: 12px; }
+    /* Paneles de configuración de Matriz */
+    .panel-box { background: #f8fafc; border: 1px solid var(--border); border-radius: 10px; padding: 12px; margin-bottom: 10px; }
     .panel-title { font-size: 0.8rem; font-weight: 800; color: #1e293b; text-transform: uppercase; margin-bottom: 8px; display: block; }
     .grid-2col { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
     .grid-precio { display: grid; grid-template-columns: 1fr 1fr 110px auto; gap: 8px; }
@@ -76,7 +81,7 @@
       .grid-precio input, .grid-precio button { grid-column: span 2; }
     }
 
-    /* ESTILOS DE LA MATRIZ RESPONSIVA PARA CELULAR */
+    /* MATRIZ DE PRODUCTOS VS TIENDAS */
     .matrix-legend { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 6px; font-size: 0.78rem; color: #4b5563; margin-bottom: 8px; }
     .badge-best { background: #dcfce7; color: #166534; padding: 3px 8px; border-radius: 6px; font-weight: 800; }
 
@@ -85,7 +90,6 @@
     table.matrix-table th, table.matrix-table td { border-bottom: 1px solid var(--border); border-right: 1px solid var(--border); padding: 8px 6px; text-align: center; vertical-align: middle; }
     table.matrix-table th { background: #f1f5f9; color: #0f172a; font-weight: 800; white-space: nowrap; padding: 10px 8px; }
 
-    /* Columna fija a la izquierda (Sticky) para ver siempre el nombre del producto en el celular */
     table.matrix-table th.sticky-col,
     table.matrix-table td.sticky-col {
       position: sticky;
@@ -93,20 +97,21 @@
       z-index: 2;
       background: #ffffff;
       text-align: left;
-      min-width: 140px;
-      max-width: 160px;
+      min-width: 135px;
+      max-width: 155px;
       box-shadow: 2px 0 5px rgba(0,0,0,0.06);
     }
     table.matrix-table th.sticky-col { background: #e2e8f0; z-index: 3; }
 
     .cell-cheapest { background-color: #dcfce7 !important; }
     .cheapest-label { display: block; font-size: 0.68rem; color: #15803d; font-weight: 800; margin-bottom: 3px; }
-    .cell-controls { display: flex; align-items: center; justify-content: center; gap: 4px; min-width: 118px; }
-    .cell-price-input { width: 80px; padding: 6px 4px; text-align: right; font-size: 0.88rem; font-weight: 700; border: 1px solid #94a3b8; border-radius: 6px; background: #fff; }
+    .cell-controls { display: flex; align-items: center; justify-content: center; gap: 4px; min-width: 122px; }
+    .cell-price-input { width: 78px; padding: 6px 4px; text-align: right; font-size: 0.88rem; font-weight: 700; border: 1px solid #94a3b8; border-radius: 6px; background: #fff; }
     .cell-cheapest .cell-price-input { border-color: #16a34a; background: #f0fdf4; color: #14532d; }
-    .btn-send-cart { background: #e0ecfb; color: var(--primary); border: none; padding: 6px 8px; border-radius: 6px; cursor: pointer; font-size: 0.82rem; font-weight: 800; }
+    .btn-send-cart { background: var(--primary); color: #ffffff; border: none; padding: 6px 8px; border-radius: 6px; cursor: pointer; font-size: 0.82rem; font-weight: 800; display: flex; align-items: center; gap: 2px; }
+    .btn-send-cart:active { transform: scale(0.92); }
     .btn-del-row { background: #fee2e2; color: var(--danger); border: none; padding: 4px 6px; border-radius: 4px; font-size: 0.72rem; cursor: pointer; }
-    .btn-del-col { background: none; border: none; color: #ef4444; font-size: 0.75rem; cursor: pointer; margin-left: 4px; font-weight: bold; }
+    .btn-del-col { background: none; border: none; color: #ef4444; font-size: 0.8rem; cursor: pointer; margin-left: 4px; font-weight: bold; }
 
     .chart-container { position: relative; height: 180px; width: 100%; margin: 10px 0; }
     .history-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 10px; background: #f8fafc; margin-bottom: 4px; border-radius: 6px; font-size: 0.85rem; }
@@ -119,53 +124,94 @@
       <a href="presupuesto.html" class="btn-nav">💰 Ir a Presupuesto</a>
     </header>
 
-    <!-- Mensajes de confirmación o alerta de base de datos -->
-    <div id="barraEstado" class="status-bar"></div>
+    <div id="barraEstado" class="status-toast"></div>
 
-    <!-- SECCIÓN 1: MATRIZ COMPARATIVA (PRODUCTOS EN FILAS X TIENDAS EN COLUMNAS) -->
-    <!-- La pusimos de primera para que puedas verla, agregar productos/tiendas y comparar al instante -->
+    <!-- SECCIÓN 1: CALCULADORA EN VIVO CON SELECCIÓN AUTOMÁTICA Y CONTROL DE UNIDADES -->
+    <section class="card" id="seccionCalculadora">
+      <div class="card-title">
+        <span>1. Calculadora de Mercado en Vivo</span>
+        <button type="button" onclick="vaciarCalculadora()" style="background:#fee2e2; color:#dc2626; border:none; padding:5px 10px; border-radius:6px; font-size:0.78rem; font-weight:800; cursor:pointer;">🗑️ Limpiar Carrito</button>
+      </div>
+
+      <!-- GRAN TOTAL QUE SUMA AUTOMÁTICAMENTE -->
+      <div class="budget-box">
+        <div class="budget-title">Total a Pagar en Calculadora</div>
+        <div class="budget-amount" id="presupuestoMixto">$0</div>
+        <div id="etiquetaAhorro"></div>
+      </div>
+
+      <!-- DOS SELECCIONADORES + UNIDADES QUE SUMAN AUTOMÁTICAMENTE AL ELEGIR -->
+      <div class="quick-box">
+        <span class="quick-label">⚡ Selección Automática: Elige Tienda y Producto (Se suma de una vez a la calculadora)</span>
+        <div class="quick-grid">
+          <select id="selTiendaRapida" onchange="dispararSeleccionRapida()">
+            <option value="">1º Selecciona Tienda...</option>
+          </select>
+          <select id="selProductoRapido" onchange="dispararSeleccionRapida()">
+            <option value="">2º Selecciona Producto...</option>
+          </select>
+          <div class="qty-stepper" style="justify-content:center; background:#fff; padding:4px 8px; border-radius:8px; border:1px solid #86efac;">
+            <span style="font-size:0.78rem; font-weight:800; color:#166534;">Unid:</span>
+            <button type="button" class="btn-step" style="width:30px; height:30px; font-size:1rem;" onclick="ajustarUnidRapida(-1)">−</button>
+            <input type="number" id="inputUnidRapida" class="input-qty" style="width:45px; height:30px; font-size:0.95rem;" min="1" value="1">
+            <button type="button" class="btn-step" style="width:30px; height:30px; font-size:1rem;" onclick="ajustarUnidRapida(1)">+</button>
+          </div>
+        </div>
+        <div id="mensajeRapido" style="font-size:0.8rem; color:#15803d; margin-top:8px; font-weight:800;"></div>
+      </div>
+
+      <!-- LISTA DE PRODUCTOS EN LA CALCULADORA CON SELECTOR DE UNIDADES -->
+      <div style="font-size:0.9rem; font-weight:800; margin-bottom:8px; color:#1e293b;">
+        👇 Productos en tu Calculadora (Toca − o + para elegir las unidades que estás comprando):
+      </div>
+      <ul class="item-list" id="contenedorChecklist"></ul>
+
+      <!-- GRÁFICA COMPARATIVA -->
+      <div style="margin-top:16px;">
+        <div style="font-size:0.8rem; font-weight:700; color:#4b5563;">Comparativa de este mercado según la tienda:</div>
+        <div class="chart-container"><canvas id="graficaComparativa"></canvas></div>
+      </div>
+    </section>
+
+    <!-- SECCIÓN 2: MATRIZ COMPARATIVA (PRODUCTOS X TIENDAS) -->
     <section class="card">
-      <div class="card-title">1. Matriz Comparativa (Filas: Productos | Columnas: Tiendas)</div>
+      <div class="card-title">2. Matriz Comparativa (Filas: Productos | Columnas: Tiendas)</div>
 
-      <!-- PASO A: AGREGAR PRODUCTO (FILA) O TIENDA (COLUMNA) -->
+      <!-- PASO 1: CREAR PRODUCTOS O TIENDAS -->
       <div class="panel-box">
-        <span class="panel-title">➕ Paso 1: Agregar Productos (Filas) y Tiendas (Columnas)</span>
+        <span class="panel-title">➕ Agregar Productos (Filas) o Tiendas (Columnas)</span>
         <div class="grid-2col">
           <div style="display:flex; gap:6px;">
-            <input type="text" id="inputNuevoProducto" placeholder="Nombre producto (ej. Leche)" style="flex:1;">
+            <input type="text" id="inputNuevoProducto" placeholder="Nuevo producto (ej. Arroz)" style="flex:1;">
             <button type="button" class="btn-primary" onclick="crearProducto()">+ Producto</button>
           </div>
           <div style="display:flex; gap:6px;">
-            <input type="text" id="inputNuevaTienda" placeholder="Nombre tienda (ej. D1, Olímpica)" style="flex:1;">
+            <input type="text" id="inputNuevaTienda" placeholder="Nueva tienda (ej. D1)" style="flex:1;">
             <button type="button" class="btn-success" onclick="crearTienda()">+ Tienda</button>
           </div>
         </div>
       </div>
 
-      <!-- PASO B: ASIGNAR EL VALOR DEL PRODUCTO EN UNA TIENDA -->
+      <!-- PASO 2: ASIGNAR PRECIO -->
       <div class="panel-box" style="background:#eff6ff; border-color:#bfdbfe;">
-        <span class="panel-title" style="color:#1e40af;">💲 Paso 2: Asignar o Cambiar el Precio de un Producto</span>
+        <span class="panel-title" style="color:#1e40af;">💲 Asignar Precio a un Producto en una Tienda</span>
         <div class="grid-precio">
           <select id="selPrecioProducto">
-            <option value="">Elige Producto...</option>
+            <option value="">Producto...</option>
           </select>
           <select id="selPrecioTienda">
-            <option value="">Elige Tienda...</option>
+            <option value="">Tienda...</option>
           </select>
-          <input type="number" id="inputValorPrecio" placeholder="Precio $ (ej. 4500)" min="0">
+          <input type="number" id="inputValorPrecio" placeholder="Precio $ (ej. 5000)" min="0">
           <button type="button" class="btn-primary" onclick="guardarPrecioDesdeFormulario()">Guardar Precio</button>
         </div>
-        <p style="font-size:0.75rem; color:#1e3a8a; margin-top:6px;">
-          💡 <strong>Tip:</strong> También puedes escribir o cambiar el precio tocando directamente cualquier casilla dentro de la tabla de abajo.
-        </p>
       </div>
 
       <div class="matrix-legend">
-        <span>📱 En celular: desliza la tabla con el dedo hacia los lados.</span>
-        <span class="badge-best">⭐ Verde = Donde es más barato</span>
+        <span>👉 Toca <strong>🛒+</strong> en cualquier precio para sumarlo directo a la calculadora de arriba.</span>
+        <span class="badge-best">⭐ Verde = Más barato</span>
       </div>
 
-      <!-- TABLA MATRIZ SIEMPRE VISIBLE -->
       <div class="matrix-scroll">
         <table class="matrix-table">
           <thead id="matrizThead"></thead>
@@ -174,44 +220,9 @@
       </div>
     </section>
 
-    <!-- SECCIÓN 2: CALCULADORA AUTOMÁTICA CON 2 SELECCIONADORES -->
-    <section class="card">
-      <div class="card-title">2. Calculadora de Mercado (Selección Automática)</div>
-
-      <div class="budget-box">
-        <div class="budget-title">Total en tu Carrito Actual</div>
-        <div class="budget-amount" id="presupuestoMixto">$0</div>
-        <div id="etiquetaAhorro"></div>
-      </div>
-
-      <!-- DOS SELECCIONADORES QUE ENVÍAN DIRECTO A LA CALCULADORA -->
-      <div class="quick-box">
-        <span class="quick-label">⚡ Selecciona Tienda y Producto (Se baja automático a la calculadora):</span>
-        <div class="quick-selects">
-          <select id="selTiendaRapida" onchange="seleccionAutomaticaCalculadora()">
-            <option value="">1º Selecciona Tienda...</option>
-          </select>
-          <select id="selProductoRapido" onchange="seleccionAutomaticaCalculadora()">
-            <option value="">2º Selecciona Producto...</option>
-          </select>
-        </div>
-        <div id="mensajeRapido" style="font-size:0.8rem; color:#15803d; margin-top:6px; font-weight:700;"></div>
-      </div>
-
-      <div class="card-title" style="font-size:0.95rem;">
-        <span>🛒 Tu Lista en la Calculadora (Solo toca − o + para las unidades)</span>
-      </div>
-      <ul class="item-list" id="contenedorChecklist"></ul>
-
-      <div style="margin-top:16px;">
-        <div style="font-size:0.82rem; font-weight:700; color:#4b5563;">Comparación total de tu carrito por tienda:</div>
-        <div class="chart-container"><canvas id="graficaComparativa"></canvas></div>
-      </div>
-    </section>
-
     <!-- SECCIÓN 3: HISTÓRICO MENSUAL -->
     <section class="card">
-      <div class="card-title">3. Histórico de Gasto Real por Mes</div>
+      <div class="card-title">3. Gasto Real Mensual en Mercado</div>
       <div class="chart-container"><canvas id="graficaHistorico"></canvas></div>
       <div id="listaHistoricoMensual" style="margin-top: 8px;"></div>
     </section>
@@ -219,35 +230,32 @@
 
   <script>
     // =========================================================================
-    // CONFIGURACIÓN DE SUPABASE (Tus credenciales ya conectadas)
+    // CONFIGURACIÓN DE SUPABASE
     // =========================================================================
     const SUPABASE_URL = "https://xqowrstjyzlyrczifmca.supabase.co";
     const SUPABASE_KEY = "sb_publishable_g0m2XAZRFxKXOfJh8ejKVg_FfsWXly-";
     const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-    // Garantizamos que la sesión esté activa para que nunca te redirija ni bloquee la pantalla
     localStorage.setItem('app_hogar_sesion_activa', 'true');
 
-    const formatearMoneda = (n) => new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(n || 0);
-    
+    const formatearMoneda = (n) => new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(Number(n) || 0);
+
     let chartMercado = null;
     let chartHistorico = null;
     let catalogoGlobal = [];
-    let checkPendGlobal = [];
-
-    // Lista inicial de tiendas (columnas de la matriz) guardada en el navegador + las de Supabase
     let tiendasColumnas = JSON.parse(localStorage.getItem('mis_tiendas_matriz') || '["D1", "Ara", "Éxito"]');
 
-    // Función para mostrar avisos claros arriba en la pantalla
+    // Carrito local sincronizado para que SIEMPRE sume al instante sin fallar jamás
+    let carritoMemoria = JSON.parse(localStorage.getItem('mi_carrito_activo_pareja') || '[]');
+    let historicoCompras = JSON.parse(localStorage.getItem('mi_historico_compras_pareja') || '[]');
+
     function mostrarAviso(texto, esError = false) {
       const barra = document.getElementById('barraEstado');
       barra.textContent = texto;
-      barra.className = 'status-bar ' + (esError ? 'status-err' : 'status-ok');
-      if (!esError) {
-        setTimeout(() => { barra.style.display = 'none'; }, 4000);
-      } else {
-        barra.style.display = 'block';
-      }
+      barra.className = 'status-toast ' + (esError ? 'status-err' : 'status-ok');
+      barra.style.display = 'block';
+      clearTimeout(window.timerAviso);
+      window.timerAviso = setTimeout(() => { barra.style.display = 'none'; }, 3500);
     }
 
     function limpiarNombreTienda(txt) {
@@ -256,73 +264,257 @@
       return limpio.charAt(0).toUpperCase() + limpio.slice(1).toLowerCase();
     }
 
+    function ajustarUnidRapida(delta) {
+      const inp = document.getElementById('inputUnidRapida');
+      const actual = parseInt(inp.value) || 1;
+      inp.value = Math.max(1, actual + delta);
+    }
+
     // =========================================================================
-    // 1. CREAR PRODUCTO (NUEVA FILA EN LA MATRIZ)
+    // 1. AGREGAR A LA CALCULADORA (DESDE LOS 2 SELECCIONADORES O DESDE EL BOTÓN 🛒 DE LA MATRIZ)
+    // =========================================================================
+    function dispararSeleccionRapida() {
+      const tienda = document.getElementById('selTiendaRapida').value;
+      const prodId = Number(document.getElementById('selProductoRapido').value);
+      const unidades = Math.max(1, parseInt(document.getElementById('inputUnidRapida').value) || 1);
+
+      // En cuanto ambos seleccionadores tienen valor, se envía de inmediato a la calculadora
+      if (!tienda || !prodId) return;
+
+      agregarACalculadoraInmediato(prodId, tienda, null, unidades);
+
+      const prod = catalogoGlobal.find(x => Number(x.id) === prodId);
+      document.getElementById('mensajeRapido').textContent =
+        `✅ "${prod ? prod.nombre : 'Producto'}" (${tienda}) sumado a la calculadora con ${unidades} unidad(es).`;
+
+      // Reiniciamos solo el selector de producto para que sigas eligiendo productos rápido en la misma tienda
+      document.getElementById('selProductoRapido').value = "";
+      document.getElementById('inputUnidRapida').value = 1;
+    }
+
+    async function agregarDesdeBotonMatriz(productoId, tienda, inputId) {
+      // Leemos el precio escrito en la casilla en este mismo instante (incluso si no habías pulsado Enter)
+      const casilla = document.getElementById(inputId);
+      let precioCasilla = casilla ? parseFloat(casilla.value) : NaN;
+
+      if (!isNaN(precioCasilla) && precioCasilla > 0) {
+        // Guardamos también ese precio en la matriz por si acababas de escribirlo
+        await guardarPrecioEnMatriz(productoId, tienda, precioCasilla, false);
+      }
+
+      await agregarACalculadoraInmediato(Number(productoId), tienda, precioCasilla, 1);
+
+      // Desplazar suavemente hacia la calculadora o resaltar el aviso
+      mostrarAviso(`🛒 Sumado a la calculadora. Arriba puedes ajustar las unidades (− / +).`);
+    }
+
+    async function agregarACalculadoraInmediato(productoId, tienda, precioForzado = null, unidadesIniciales = 1) {
+      const prod = catalogoGlobal.find(x => Number(x.id) === Number(productoId));
+      if (!prod) return;
+
+      const hist = Array.isArray(prod.historial_precios) ? prod.historial_precios : [];
+      const reg = hist.find(h => (h.tienda || '').toLowerCase() === tienda.toLowerCase());
+      
+      let precioFinal = (!isNaN(precioForzado) && precioForzado !== null && precioForzado > 0)
+        ? Number(precioForzado)
+        : (reg ? Number(reg.precio) : 0);
+
+      // Verificar si ya está en la calculadora
+      const idx = carritoMemoria.findIndex(item => Number(item.producto_id) === Number(productoId));
+
+      if (idx >= 0) {
+        // Si ya estaba en el carrito y tocas de nuevo el botón 🛒 de la misma tienda, le suma +1 unidad; si es otra tienda, cambia a esa tienda
+        if ((carritoMemoria[idx].tienda_seleccionada || '').toLowerCase() === tienda.toLowerCase()) {
+          carritoMemoria[idx].cantidad = Number(carritoMemoria[idx].cantidad || 1) + Number(unidadesIniciales);
+        } else {
+          carritoMemoria[idx].tienda_seleccionada = tienda;
+          carritoMemoria[idx].cantidad = Number(unidadesIniciales);
+        }
+        carritoMemoria[idx].precio_seleccionado = precioFinal;
+        carritoMemoria[idx].activo = true;
+      } else {
+        carritoMemoria.unshift({
+          id: Date.now(),
+          producto_id: Number(productoId),
+          nombre_respaldo: prod.nombre,
+          tienda_seleccionada: tienda,
+          precio_seleccionado: precioFinal,
+          cantidad: Number(unidadesIniciales),
+          activo: true,
+          comprado: false
+        });
+      }
+
+      guardarCarritoYRefrescar();
+
+      // Sincronizar también en Supabase en segundo plano
+      try {
+        await supabaseClient.from('checklist_mercado').insert([{
+          producto_id: Number(productoId),
+          tienda_seleccionada: tienda,
+          precio_seleccionado: precioFinal,
+          cantidad: Number(unidadesIniciales),
+          activo: true,
+          comprado: false
+        }]);
+      } catch (e) {}
+    }
+
+    // =========================================================================
+    // 2. CAMBIAR UNIDADES (− / +), TIENDA O PRECIO EN LA CALCULADORA
+    // =========================================================================
+    function cambiarCantidadCalculadora(itemId, nuevaCantidad) {
+      const cant = Math.max(1, parseInt(nuevaCantidad) || 1);
+      const item = carritoMemoria.find(i => Number(i.id) === Number(itemId));
+      if (!item) return;
+
+      item.cantidad = cant;
+      guardarCarritoYRefrescar();
+    }
+
+    function cambiarTiendaEnCalculadora(itemId, valorCombinado) {
+      const [nuevaTienda, nuevoPrecio] = valorCombinado.split('|');
+      const item = carritoMemoria.find(i => Number(i.id) === Number(itemId));
+      if (!item) return;
+
+      item.tienda_seleccionada = nuevaTienda;
+      item.precio_seleccionado = parseFloat(nuevoPrecio) || 0;
+      guardarCarritoYRefrescar();
+    }
+
+    function cambiarPrecioDirectoCalculadora(itemId, nuevoPrecioVal) {
+      const p = Math.max(0, parseFloat(nuevoPrecioVal) || 0);
+      const item = carritoMemoria.find(i => Number(i.id) === Number(itemId));
+      if (!item) return;
+
+      item.precio_seleccionado = p;
+      // Si tiene tienda asignada, actualizamos también el precio en la matriz para que quede guardado
+      if (item.tienda_seleccionada && p > 0) {
+        guardarPrecioEnMatriz(item.producto_id, item.tienda_seleccionada, p, false);
+      }
+      guardarCarritoYRefrescar();
+    }
+
+    function toggleActivoCalculadora(itemId) {
+      const item = carritoMemoria.find(i => Number(i.id) === Number(itemId));
+      if (!item) return;
+      item.activo = !item.activo;
+      guardarCarritoYRefrescar();
+    }
+
+    function quitarItemCalculadora(itemId) {
+      carritoMemoria = carritoMemoria.filter(i => Number(i.id) !== Number(itemId));
+      guardarCarritoYRefrescar();
+    }
+
+    function vaciarCalculadora() {
+      if (carritoMemoria.length === 0) return;
+      if (!confirm("¿Vaciar todos los productos de la calculadora actual?")) return;
+      carritoMemoria = [];
+      guardarCarritoYRefrescar();
+    }
+
+    async function marcarComoComprado(itemId) {
+      const item = carritoMemoria.find(i => Number(i.id) === Number(itemId));
+      if (!item) return;
+
+      if (Number(item.precio_seleccionado) <= 0) {
+        return alert("Ponle un precio mayor a $0 en la casilla de Precio Unitario o en la Matriz antes de marcarlo como comprado.");
+      }
+
+      const registroCompra = {
+        ...item,
+        comprado: true,
+        fecha_compra: new Date().toISOString()
+      };
+
+      historicoCompras.push(registroCompra);
+      localStorage.setItem('mi_historico_compras_pareja', JSON.stringify(historicoCompras));
+
+      carritoMemoria = carritoMemoria.filter(i => Number(i.id) !== Number(itemId));
+      guardarCarritoYRefrescar();
+
+      try {
+        await supabaseClient.from('checklist_mercado').insert([{
+          producto_id: item.producto_id,
+          tienda_seleccionada: item.tienda_seleccionada,
+          precio_seleccionado: item.precio_seleccionado,
+          cantidad: item.cantidad,
+          activo: true,
+          comprado: true,
+          fecha_compra: registroCompra.fecha_compra
+        }]);
+      } catch (e) {}
+
+      mostrarAviso(`✅ Compra registrada en el gasto mensual.`);
+      dibujarHistorico();
+    }
+
+    function guardarCarritoYRefrescar() {
+      localStorage.setItem('mi_carrito_activo_pareja', JSON.stringify(carritoMemoria));
+      dibujarCalculadoraY Totales();
+    }
+
+    // =========================================================================
+    // 3. CREAR PRODUCTOS, TIENDAS Y GUARDAR PRECIOS EN LA MATRIZ
     // =========================================================================
     async function crearProducto() {
       const input = document.getElementById('inputNuevoProducto');
       const nombre = input.value.trim();
-      if (!nombre) return alert("Escribe el nombre del producto (ej. Arroz, Huevos, Leche).");
+      if (!nombre) return alert("Escribe el nombre del producto.");
 
       const { error } = await supabaseClient
         .from('productos_mercado')
         .insert([{ nombre: nombre, historial_precios: [] }]);
 
       if (error) {
-        mostrarAviso("⚠️ Error en Supabase al crear producto: " + error.message + ". Asegúrate de ejecutar el script SQL de la Fase 2.", true);
+        mostrarAviso("⚠️ Error al crear producto: " + error.message, true);
         return;
       }
 
       input.value = '';
-      mostrarAviso(`✅ Producto "${nombre}" agregado como nueva fila en la matriz.`);
-      await cargarYRenderizar();
+      mostrarAviso(`✅ Producto "${nombre}" añadido a la matriz.`);
+      await cargarTodo();
     }
 
-    // =========================================================================
-    // 2. CREAR TIENDA (NUEVA COLUMNA EN LA MATRIZ)
-    // =========================================================================
     function crearTienda() {
       const input = document.getElementById('inputNuevaTienda');
-      const nuevaTienda = limpiarNombreTienda(input.value);
-      if (!nuevaTienda) return alert("Escribe el nombre de la tienda (ej. D1, Ara, Ísimo).");
+      const nueva = limpiarNombreTienda(input.value);
+      if (!nueva) return alert("Escribe el nombre de la tienda.");
 
-      const yaExiste = tiendasColumnas.some(t => t.toLowerCase() === nuevaTienda.toLowerCase());
-      if (!yaExiste) {
-        tiendasColumnas.push(nuevaTienda);
+      if (!tiendasColumnas.some(t => t.toLowerCase() === nueva.toLowerCase())) {
+        tiendasColumnas.push(nueva);
         localStorage.setItem('mis_tiendas_matriz', JSON.stringify(tiendasColumnas));
       }
 
       input.value = '';
-      mostrarAviso(`🏪 Tienda "${nuevaTienda}" agregada como nueva columna en la matriz.`);
-      cargarYRenderizar();
+      mostrarAviso(`🏪 Columna "${nueva}" añadida a la matriz.`);
+      cargarTodo();
     }
 
-    function eliminarColumnaTienda(nombreTienda) {
-      if (!confirm(`¿Ocultar la columna de la tienda "${nombreTienda}"?`)) return;
-      tiendasColumnas = tiendasColumnas.filter(t => t.toLowerCase() !== nombreTienda.toLowerCase());
+    function eliminarColumnaTienda(tienda) {
+      if (!confirm(`¿Quitar la columna "${tienda}" de la vista?`)) return;
+      tiendasColumnas = tiendasColumnas.filter(t => t.toLowerCase() !== tienda.toLowerCase());
       localStorage.setItem('mis_tiendas_matriz', JSON.stringify(tiendasColumnas));
-      cargarYRenderizar();
+      cargarTodo();
     }
 
-    // =========================================================================
-    // 3. ASIGNAR O ACTUALIZAR PRECIO (DESDE FORMULARIO O DESDE LA MATRIZ)
-    // =========================================================================
     async function guardarPrecioDesdeFormulario() {
-      const prodId = parseInt(document.getElementById('selPrecioProducto').value);
+      const prodId = Number(document.getElementById('selPrecioProducto').value);
       const tienda = document.getElementById('selPrecioTienda').value;
       const valor = parseFloat(document.getElementById('inputValorPrecio').value);
 
-      if (isNaN(prodId)) return alert("Selecciona un Producto de la lista.");
-      if (!tienda) return alert("Selecciona una Tienda de la lista.");
-      if (isNaN(valor) || valor < 0) return alert("Escribe un precio válido.");
+      if (!prodId || !tienda || isNaN(valor)) {
+        return alert("Elige el Producto, la Tienda y escribe el Precio.");
+      }
 
-      await guardarPrecioEnMatriz(prodId, tienda, valor);
+      await guardarPrecioEnMatriz(prodId, tienda, valor, true);
       document.getElementById('inputValorPrecio').value = '';
     }
 
-    async function guardarPrecioEnMatriz(productoId, tienda, valorPrecio) {
+    async function guardarPrecioEnMatriz(productoId, tienda, valorPrecio, recargar = true) {
       const precioNum = parseFloat(valorPrecio);
-      const prod = catalogoGlobal.find(x => x.id === productoId);
+      const prod = catalogoGlobal.find(x => Number(x.id) === Number(productoId));
       if (!prod) return;
 
       let historial = Array.isArray(prod.historial_precios) ? [...prod.historial_precios] : [];
@@ -331,164 +523,179 @@
       if (isNaN(precioNum) || precioNum <= 0) {
         if (idx >= 0) historial.splice(idx, 1);
       } else {
-        if (idx >= 0) {
-          historial[idx].precio = precioNum;
-        } else {
-          historial.push({ tienda: tienda, precio: precioNum });
-        }
+        if (idx >= 0) historial[idx].precio = precioNum;
+        else historial.push({ tienda: tienda, precio: precioNum });
       }
 
-      const { error } = await supabaseClient
+      prod.historial_precios = historial;
+
+      await supabaseClient
         .from('productos_mercado')
         .update({ historial_precios: historial })
         .eq('id', productoId);
 
-      if (error) {
-        mostrarAviso("⚠️ No se pudo guardar el precio: " + error.message, true);
-        return;
+      // Si este producto está en la calculadora con esa misma tienda, le actualizamos el precio y el total de inmediato
+      carritoMemoria.forEach(item => {
+        if (Number(item.producto_id) === Number(productoId) && (item.tienda_seleccionada || '').toLowerCase() === tienda.toLowerCase()) {
+          item.precio_seleccionado = (!isNaN(precioNum) && precioNum > 0) ? precioNum : 0;
+        }
+      });
+      localStorage.setItem('mi_carrito_activo_pareja', JSON.stringify(carritoMemoria));
+
+      if (recargar) {
+        mostrarAviso(`💲 Precio guardado: ${prod.nombre} en ${tienda} = ${formatearMoneda(precioNum)}`);
+        await cargarTodo();
       }
-
-      // Si el producto ya está en la calculadora con esa tienda, actualizamos su precio automáticamente
-      const itemEnCarrito = checkPendGlobal.find(
-        c => c.producto_id === productoId && (c.tienda_seleccionada || '').toLowerCase() === tienda.toLowerCase()
-      );
-      if (itemEnCarrito && !isNaN(precioNum) && precioNum > 0) {
-        await supabaseClient
-          .from('checklist_mercado')
-          .update({ precio_seleccionado: precioNum })
-          .eq('id', itemEnCarrito.id);
-      }
-
-      mostrarAviso(`💲 Precio de "${prod.nombre}" en ${tienda} actualizado a ${formatearMoneda(precioNum)}.`);
-      await cargarYRenderizar();
-    }
-
-    // =========================================================================
-    // 4. SELECCIÓN AUTOMÁTICA (TIENDA + PRODUCTO -> DIRECTO A CALCULADORA)
-    // =========================================================================
-    async function seleccionAutomaticaCalculadora() {
-      const tienda = document.getElementById('selTiendaRapida').value;
-      const prodId = parseInt(document.getElementById('selProductoRapido').value);
-      const msg = document.getElementById('mensajeRapido');
-
-      // Cuando ambos seleccionadores tienen un valor, se dispara automáticamente
-      if (!tienda || isNaN(prodId)) return;
-
-      await enviarProductoACalculadora(prodId, tienda);
-
-      const prod = catalogoGlobal.find(x => x.id === prodId);
-      msg.textContent = `✅ "${prod ? prod.nombre : 'Producto'}" (${tienda}) agregado abajo. ¡Solo ajusta las unidades!`;
-
-      // Dejamos la tienda seleccionada y reiniciamos solo el selector de producto
-      document.getElementById('selProductoRapido').value = "";
-    }
-
-    async function enviarProductoACalculadora(productoId, tienda) {
-      const prod = catalogoGlobal.find(x => x.id === productoId);
-      if (!prod) return;
-
-      const historial = Array.isArray(prod.historial_precios) ? prod.historial_precios : [];
-      const reg = historial.find(h => (h.tienda || '').toLowerCase() === tienda.toLowerCase());
-      const precio = reg ? reg.precio : 0;
-
-      const existente = checkPendGlobal.find(i => i.producto_id === productoId);
-
-      if (existente) {
-        await supabaseClient.from('checklist_mercado').update({
-          tienda_seleccionada: tienda,
-          precio_seleccionado: precio,
-          activo: true
-        }).eq('id', existente.id);
-      } else {
-        await supabaseClient.from('checklist_mercado').insert([{
-          producto_id: productoId,
-          tienda_seleccionada: tienda,
-          precio_seleccionado: precio,
-          cantidad: 1,
-          activo: true
-        }]);
-      }
-
-      mostrarAviso(`🛒 "${prod.nombre}" (${tienda}) enviado a la calculadora.`);
-      await cargarYRenderizar();
-    }
-
-    // =========================================================================
-    // 5. FUNCIONES DEL CARRITO / CALCULADORA
-    // =========================================================================
-    async function cambiarCantidad(id, nuevaCant) {
-      const c = Math.max(1, parseInt(nuevaCant) || 1);
-      await supabaseClient.from('checklist_mercado').update({ cantidad: c }).eq('id', id);
-      cargarYRenderizar();
-    }
-
-    async function cambiarTiendaItemCarrito(id, valor) {
-      const [t, p] = valor.split('|');
-      await supabaseClient.from('checklist_mercado').update({
-        tienda_seleccionada: t,
-        precio_seleccionado: parseFloat(p) || 0
-      }).eq('id', id);
-      cargarYRenderizar();
-    }
-
-    async function toggleActivo(id, actual) {
-      await supabaseClient.from('checklist_mercado').update({ activo: !actual }).eq('id', id);
-      cargarYRenderizar();
-    }
-
-    async function registrarCompra(id, precioSel) {
-      if (precioSel <= 0) {
-        return alert("Este producto tiene precio $0 en esta tienda. Escribe primero su precio en la Matriz de arriba para poder registrarlo en el gasto mensual.");
-      }
-      await supabaseClient.from('checklist_mercado').update({
-        comprado: true,
-        fecha_compra: new Date().toISOString()
-      }).eq('id', id);
-      cargarYRenderizar();
-    }
-
-    async function quitarDelCarrito(id) {
-      await supabaseClient.from('checklist_mercado').delete().eq('id', id);
-      cargarYRenderizar();
     }
 
     async function eliminarProductoCatalogo(id) {
-      if (!confirm("¿Seguro que deseas borrar este producto de la matriz?")) return;
+      if (!confirm("¿Eliminar este producto de la matriz?")) return;
       await supabaseClient.from('productos_mercado').delete().eq('id', id);
-      cargarYRenderizar();
+      carritoMemoria = carritoMemoria.filter(i => Number(i.producto_id) !== Number(id));
+      localStorage.setItem('mi_carrito_activo_pareja', JSON.stringify(carritoMemoria));
+      cargarTodo();
     }
 
     // =========================================================================
-    // 6. DIBUJAR TODA LA APLICACIÓN (SIEMPRE DIBUJA LA MATRIZ AUNQUE ESTÉ VACÍA)
+    // 4. DIBUJAR CALCULADORA, UNIDADES Y TOTALES EN TIEMPO REAL
     // =========================================================================
-    async function cargarYRenderizar() {
-      let catalogo = [];
-      let checkAll = [];
+    function dibujarCalculadoraY_Totales() {
+      let mixto = 0;
+      let peorEscenario = 0;
+      let totTienda = {};
 
-      try {
-        const resCat = await supabaseClient.from('productos_mercado').select('*').order('nombre', { ascending: true });
-        if (resCat.error) {
-          mostrarAviso("⚠️ Error leyendo productos_mercado: " + resCat.error.message, true);
-        } else {
-          catalogo = resCat.data || [];
-        }
+      carritoMemoria.forEach(item => {
+        if (!item.activo) return;
+        const cant = Number(item.cantidad) || 1;
+        const precioUnit = Number(item.precio_seleccionado) || 0;
 
-        const resCheck = await supabaseClient.from('checklist_mercado').select('*').order('id', { ascending: false });
-        if (!resCheck.error) {
-          checkAll = resCheck.data || [];
+        mixto += (precioUnit * cant);
+        let max = precioUnit;
+
+        const p = catalogoGlobal.find(x => Number(x.id) === Number(item.producto_id));
+        if (p && Array.isArray(p.historial_precios)) {
+          p.historial_precios.forEach(h => {
+            const ph = Number(h.precio) || 0;
+            if (ph > max) max = ph;
+            if (!totTienda[h.tienda]) totTienda[h.tienda] = 0;
+            totTienda[h.tienda] += (ph * cant);
+          });
         }
-      } catch (err) {
-        mostrarAviso("⚠️ Error de red conectando a Supabase.", true);
+        peorEscenario += (max * cant);
+      });
+
+      // Actualizar el Gran Número Azul de la Calculadora
+      document.getElementById('presupuestoMixto').textContent = formatearMoneda(mixto);
+
+      const ahorro = peorEscenario - mixto;
+      const et = document.getElementById('etiquetaAhorro');
+      if (ahorro > 0 && mixto > 0) {
+        et.innerHTML = `<div class="saving-badge">🌟 Ahorras ${formatearMoneda(ahorro)} frente a la opción más cara</div>`;
+      } else {
+        et.innerHTML = '';
       }
 
-      catalogoGlobal = catalogo;
-      const checkPend = checkAll.filter(i => !i.comprado);
-      const checkComp = checkAll.filter(i => i.comprado);
-      checkPendGlobal = checkPend;
+      // Dibujar cada producto del carrito con sus botones de UNIDADES (− / +)
+      const contenedor = document.getElementById('contenedorChecklist');
+      if (carritoMemoria.length === 0) {
+        contenedor.innerHTML = `<p style="text-align:center; font-size:0.88rem; color:#6b7280; padding:14px; background:#f8fafc; border-radius:8px;">Tu calculadora está vacía. Elige Tienda y Producto arriba o toca el botón azul <strong>🛒+</strong> en cualquier celda de la matriz.</p>`;
+      } else {
+        contenedor.innerHTML = carritoMemoria.map(item => {
+          const p = catalogoGlobal.find(x => Number(x.id) === Number(item.producto_id));
+          const nombreMostrar = p ? p.nombre : (item.nombre_respaldo || 'Producto');
+          const hist = (p && Array.isArray(p.historial_precios)) ? p.historial_precios : [];
+          const cant = Number(item.cantidad) || 1;
+          const precioUnit = Number(item.precio_seleccionado) || 0;
+          const subtotal = precioUnit * cant;
 
-      // Construir lista única de tiendas (las guardadas + cualquier tienda que venga en los productos de Supabase)
+          let opcionesTienda = hist.map(h =>
+            `<option value="${h.tienda}|${h.precio}" ${(h.tienda || '').toLowerCase() === (item.tienda_seleccionada || '').toLowerCase() ? 'selected' : ''}>🏪 ${h.tienda}: ${formatearMoneda(h.precio)} c/u</option>`
+          ).join('');
+
+          if (item.tienda_seleccionada && !hist.some(h => (h.tienda || '').toLowerCase() === item.tienda_seleccionada.toLowerCase())) {
+            opcionesTienda = `<option value="${item.tienda_seleccionada}|${precioUnit}" selected>🏪 ${item.tienda_seleccionada}: ${formatearMoneda(precioUnit)} c/u</option>` + opcionesTienda;
+          }
+
+          return `
+            <li class="cart-item ${!item.activo ? 'inactivo' : ''}">
+              <div class="cart-top">
+                <label class="cart-prod-title">
+                  <input type="checkbox" class="checkbox" ${item.activo ? 'checked' : ''} onchange="toggleActivoCalculadora(${item.id})">
+                  <span>${nombreMostrar}</span>
+                </label>
+                <button type="button" class="btn-remove" onclick="quitarItemCalculadora(${item.id})">✕ Quitar</button>
+              </div>
+
+              <!-- FILA CLARA PARA ELEGIR LAS UNIDADES QUE ESTÁS COMPRANDO -->
+              <div class="units-row">
+                <span class="units-label">📦 Unidades a comprar:</span>
+                <div class="qty-stepper">
+                  <button type="button" class="btn-step" onclick="cambiarCantidadCalculadora(${item.id}, ${cant - 1})">−</button>
+                  <input type="number" class="input-qty" min="1" value="${cant}" oninput="cambiarCantidadCalculadora(${item.id}, this.value)">
+                  <button type="button" class="btn-step" onclick="cambiarCantidadCalculadora(${item.id}, ${cant + 1})">+</button>
+                </div>
+              </div>
+
+              <!-- SELECTOR DE TIENDA Y PRECIO UNITARIO EDITABLE -->
+              <div style="display:grid; grid-template-columns: 1fr auto; gap:8px; align-items:center;">
+                <select class="select-tienda" onchange="cambiarTiendaEnCalculadora(${item.id}, this.value)">
+                  ${opcionesTienda || `<option value="${item.tienda_seleccionada || 'Tienda'}|${precioUnit}">🏪 ${item.tienda_seleccionada || 'Sin tienda'}</option>`}
+                </select>
+                <div style="display:flex; align-items:center; gap:4px;">
+                  <span style="font-size:0.75rem; color:#4b5563; font-weight:700;">Unit $:</span>
+                  <input type="number" value="${precioUnit}" style="width:85px; padding:6px; font-weight:800; text-align:right;"
+                    onchange="cambiarPrecioDirectoCalculadora(${item.id}, this.value)">
+                </div>
+              </div>
+
+              <div class="cart-bottom">
+                <span style="font-size:0.82rem; color:#4b5563;">${cant} unid. × ${formatearMoneda(precioUnit)}</span>
+                <span style="font-size:1.05rem; color:var(--primary); font-weight:900;">Subtotal: ${formatearMoneda(subtotal)}</span>
+              </div>
+
+              <button type="button" class="btn-buy" onclick="marcarComoComprado(${item.id})">✅ Confirmar Compra (${formatearMoneda(subtotal)})</button>
+            </li>
+          `;
+        }).join('');
+      }
+
+      // Actualizar Gráfica Comparativa
+      const ctx = document.getElementById('graficaComparativa').getContext('2d');
+      if (chartMercado) chartMercado.destroy();
+      chartMercado = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: ['Tu Calculadora', ...Object.keys(totTienda)],
+          datasets: [{
+            label: 'Total',
+            data: [mixto, ...Object.values(totTienda)],
+            backgroundColor: ['#0066ff', ...Object.keys(totTienda).map(() => '#cbd5e1')],
+            borderRadius: 6
+          }]
+        },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
+      });
+    }
+
+    // Alias seguro sin espacio
+    function dibujarCalculadoraYTotales() {
+      dibujarCalculadoraY_Totales();
+    }
+
+    // =========================================================================
+    // 5. CARGAR CATÁLOGO Y DIBUJAR MATRIZ + HISTÓRICO
+    // =========================================================================
+    async function cargarTodo() {
+      try {
+        const resCat = await supabaseClient.from('productos_mercado').select('*').order('nombre', { ascending: true });
+        if (!resCat.error && resCat.data) {
+          catalogoGlobal = resCat.data;
+        }
+      } catch (e) {}
+
+      // Unificar tiendas
       const setTiendas = new Set(tiendasColumnas);
-      catalogo.forEach(p => {
+      catalogoGlobal.forEach(p => {
         (p.historial_precios || []).forEach(h => {
           if (h.tienda) setTiendas.add(limpiarNombreTienda(h.tienda));
         });
@@ -496,27 +703,27 @@
       tiendasColumnas = Array.from(setTiendas);
       localStorage.setItem('mis_tiendas_matriz', JSON.stringify(tiendasColumnas));
 
-      // --- A. LLENAR SELECTORES DE PRECIO Y SELECTORES RÁPIDOS ---
-      const selPrecioProd = document.getElementById('selPrecioProducto');
-      const prevProd = selPrecioProd.value;
-      selPrecioProd.innerHTML = `<option value="">Elige Producto...</option>` +
-        catalogo.map(p => `<option value="${p.id}" ${String(p.id) === prevProd ? 'selected' : ''}>${p.nombre}</option>`).join('');
-
-      const selPrecioTienda = document.getElementById('selPrecioTienda');
-      const prevTiendaPrecio = selPrecioTienda.value;
-      selPrecioTienda.innerHTML = `<option value="">Elige Tienda...</option>` +
-        tiendasColumnas.map(t => `<option value="${t}" ${t === prevTiendaPrecio ? 'selected' : ''}>${t}</option>`).join('');
-
+      // Llenar los 2 seleccionadores rápidos y el formulario de precios
       const selTiendaRapida = document.getElementById('selTiendaRapida');
-      const prevTiendaRapida = selTiendaRapida.value;
+      const prevT = selTiendaRapida.value;
       selTiendaRapida.innerHTML = `<option value="">1º Selecciona Tienda...</option>` +
-        tiendasColumnas.map(t => `<option value="${t}" ${t === prevTiendaRapida ? 'selected' : ''}>🏪 ${t}</option>`).join('');
+        tiendasColumnas.map(t => `<option value="${t}" ${t === prevT ? 'selected' : ''}>🏪 ${t}</option>`).join('');
 
       const selProductoRapido = document.getElementById('selProductoRapido');
       selProductoRapido.innerHTML = `<option value="">2º Selecciona Producto...</option>` +
-        catalogo.map(p => `<option value="${p.id}">📦 ${p.nombre}</option>`).join('');
+        catalogoGlobal.map(p => `<option value="${p.id}">📦 ${p.nombre}</option>`).join('');
 
-      // --- B. DIBUJAR MATRIZ COMPARATIVA (PRODUCTOS X TIENDAS) ---
+      const selPrecioProd = document.getElementById('selPrecioProducto');
+      const prevP = selPrecioProd.value;
+      selPrecioProd.innerHTML = `<option value="">Producto...</option>` +
+        catalogoGlobal.map(p => `<option value="${p.id}" ${String(p.id) === prevP ? 'selected' : ''}>${p.nombre}</option>`).join('');
+
+      const selPrecioTienda = document.getElementById('selPrecioTienda');
+      const prevPT = selPrecioTienda.value;
+      selPrecioTienda.innerHTML = `<option value="">Tienda...</option>` +
+        tiendasColumnas.map(t => `<option value="${t}" ${t === prevPT ? 'selected' : ''}>${t}</option>`).join('');
+
+      // Dibujar Matriz Comparativa
       const thead = document.getElementById('matrizThead');
       const tbody = document.getElementById('matrizTbody');
 
@@ -526,38 +733,33 @@
           ${tiendasColumnas.map(t => `
             <th>
               🏪 ${t}
-              <button type="button" class="btn-del-col" onclick="eliminarColumnaTienda('${t}')" title="Quitar columna">×</button>
+              <button type="button" class="btn-del-col" onclick="eliminarColumnaTienda('${t}')">×</button>
             </th>
           `).join('')}
         </tr>
       `;
 
-      if (catalogo.length === 0) {
-        tbody.innerHTML = `
-          <tr>
-            <td colspan="${tiendasColumnas.length + 1}" style="padding:20px; text-align:center; color:#4b5563;">
-              Aún no hay productos en la matriz. Escribe un producto arriba en el <strong>Paso 1</strong> y pulsa <strong>+ Producto</strong>.
-            </td>
-          </tr>
-        `;
+      if (catalogoGlobal.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="${tiendasColumnas.length + 1}" style="padding:18px; color:#6b7280;">Agrega un producto arriba para ver las filas de la matriz.</td></tr>`;
       } else {
-        tbody.innerHTML = catalogo.map(p => {
+        tbody.innerHTML = catalogoGlobal.map(p => {
           const hist = Array.isArray(p.historial_precios) ? p.historial_precios : [];
-          const preciosConValor = hist.map(h => Number(h.precio)).filter(v => v > 0);
-          const menorPrecio = preciosConValor.length > 0 ? Math.min(...preciosConValor) : null;
+          const preciosValidos = hist.map(h => Number(h.precio)).filter(v => v > 0);
+          const menorPrecio = preciosValidos.length > 0 ? Math.min(...preciosValidos) : null;
 
-          const celdasHTML = tiendasColumnas.map(tienda => {
+          const celdas = tiendasColumnas.map((tienda, idxCol) => {
             const reg = hist.find(h => (h.tienda || '').toLowerCase() === tienda.toLowerCase());
-            const valor = reg && reg.precio > 0 ? reg.precio : '';
-            const esElMasBarato = (menorPrecio !== null && Number(valor) === menorPrecio);
+            const valor = reg && Number(reg.precio) > 0 ? reg.precio : '';
+            const esMasBarato = (menorPrecio !== null && Number(valor) === menorPrecio);
+            const inputId = `celda-${p.id}-${idxCol}`;
 
             return `
-              <td class="${esElMasBarato ? 'cell-cheapest' : ''}">
-                ${esElMasBarato ? '<span class="cheapest-label">⭐ Más barato</span>' : ''}
+              <td class="${esMasBarato ? 'cell-cheapest' : ''}">
+                ${esMasBarato ? '<span class="cheapest-label">⭐ Más barato</span>' : ''}
                 <div class="cell-controls">
-                  <input type="number" class="cell-price-input" placeholder="$0" value="${valor}"
-                    onchange="guardarPrecioEnMatriz(${p.id}, '${tienda}', this.value)">
-                  <button type="button" class="btn-send-cart" onclick="enviarProductoACalculadora(${p.id}, '${tienda}')" title="Enviar a la calculadora">🛒</button>
+                  <input type="number" id="${inputId}" class="cell-price-input" placeholder="$0" value="${valor}"
+                    onchange="guardarPrecioEnMatriz(${p.id}, '${tienda}', this.value, true)">
+                  <button type="button" class="btn-send-cart" onclick="agregarDesdeBotonMatriz(${p.id}, '${tienda}', '${inputId}')" title="Sumar a la calculadora">🛒+</button>
                 </div>
               </td>
             `;
@@ -568,109 +770,35 @@
               <td class="sticky-col">
                 <div style="display:flex; justify-content:space-between; align-items:center; gap:4px;">
                   <span style="font-weight:800; color:#111827;">${p.nombre}</span>
-                  <button type="button" class="btn-del-row" onclick="eliminarProductoCatalogo(${p.id})" title="Borrar producto">🗑️</button>
+                  <button type="button" class="btn-del-row" onclick="eliminarProductoCatalogo(${p.id})">🗑️</button>
                 </div>
               </td>
-              ${celdasHTML}
+              ${celdas}
             </tr>
           `;
         }).join('');
       }
 
-      // --- C. MATEMÁTICAS DE LA CALCULADORA Y CARRITO ---
-      let mixto = 0;
-      let peorEscenario = 0;
-      let totTienda = {};
+      dibujarCalculadoraYTotales();
+      dibujarHistorico();
+    }
 
-      checkPend.forEach(i => {
-        if (!i.activo) return;
-        const p = catalogo.find(x => x.id === i.producto_id);
-        if (!p) return;
-
-        mixto += (i.precio_seleccionado * i.cantidad);
-        let max = i.precio_seleccionado;
-
-        (p.historial_precios || []).forEach(h => {
-          if (h.precio > max) max = h.precio;
-          if (!totTienda[h.tienda]) totTienda[h.tienda] = 0;
-          totTienda[h.tienda] += (h.precio * i.cantidad);
-        });
-        peorEscenario += (max * i.cantidad);
-      });
-
-      document.getElementById('presupuestoMixto').textContent = formatearMoneda(mixto);
-      const ahorro = peorEscenario - mixto;
-      const et = document.getElementById('etiquetaAhorro');
-      if (ahorro > 0 && mixto > 0) {
-        et.innerHTML = `<div class="saving-badge">🌟 Ahorras ${formatearMoneda(ahorro)} comprando inteligente</div>`;
-      } else {
-        et.innerHTML = '';
-      }
-
-      document.getElementById('contenedorChecklist').innerHTML = checkPend.map(i => {
-        const p = catalogo.find(x => x.id === i.producto_id);
-        if (!p) return '';
-        const subtotal = i.precio_seleccionado * i.cantidad;
-        const hist = Array.isArray(p.historial_precios) ? p.historial_precios : [];
-
-        let opts = hist.map(h =>
-          `<option value="${h.tienda}|${h.precio}" ${(h.tienda.toLowerCase() === (i.tienda_seleccionada || '').toLowerCase()) ? 'selected' : ''}>${h.tienda}: ${formatearMoneda(h.precio)} c/u</option>`
-        ).join('');
-
-        if (i.tienda_seleccionada && !hist.some(h => h.tienda.toLowerCase() === i.tienda_seleccionada.toLowerCase())) {
-          opts = `<option value="${i.tienda_seleccionada}|0" selected>${i.tienda_seleccionada}: $0 (Ponle precio en la matriz)</option>` + opts;
+    async function dibujarHistorico() {
+      let comprasTotales = [...historicoCompras];
+      try {
+        const { data } = await supabaseClient.from('checklist_mercado').select('*').eq('comprado', true);
+        if (data && data.length > 0) {
+          comprasTotales = data;
         }
-
-        return `
-          <li class="checklist-item ${!i.activo ? 'inactivo' : ''}">
-            <input type="checkbox" class="checkbox" ${i.activo ? 'checked' : ''} onclick="toggleActivo(${i.id}, ${i.activo})">
-            <div class="checklist-info">
-              <div style="display:flex; justify-content:space-between; align-items:center; gap:6px; flex-wrap:wrap;">
-                <span style="font-weight:800; font-size:1rem;">${p.nombre}</span>
-                <div class="qty-controls">
-                  <button type="button" class="btn-qty" onclick="cambiarCantidad(${i.id}, ${i.cantidad - 1})">−</button>
-                  <input type="number" class="input-qty" min="1" value="${i.cantidad}" onchange="cambiarCantidad(${i.id}, this.value)">
-                  <button type="button" class="btn-qty" onclick="cambiarCantidad(${i.id}, ${i.cantidad + 1})">+</button>
-                </div>
-              </div>
-              <select class="select-tienda" onchange="cambiarTiendaItemCarrito(${i.id}, this.value)">
-                ${opts || '<option value="|0">Sin precios asignados</option>'}
-              </select>
-              <div style="display:flex; justify-content:space-between; align-items:center;">
-                <span style="font-size:0.8rem; color:#4b5563;">Unitario: ${formatearMoneda(i.precio_seleccionado)}</span>
-                <span style="font-size:0.95rem; color:var(--primary); font-weight:900;">Subtotal: ${formatearMoneda(subtotal)}</span>
-              </div>
-              <button type="button" class="btn-buy" onclick="registrarCompra(${i.id}, ${i.precio_seleccionado})">✅ Marcar como Comprado</button>
-            </div>
-            <button type="button" class="btn-remove" onclick="quitarDelCarrito(${i.id})">×</button>
-          </li>
-        `;
-      }).join('') || '<p style="text-align:center; font-size:0.85rem; color:#6b7280; padding:10px;">Tu carrito está vacío. Usa los 2 seleccionadores de arriba o el botón 🛒 en la matriz.</p>';
-
-      // --- D. GRÁFICAS ---
-      const ctx = document.getElementById('graficaComparativa').getContext('2d');
-      if (chartMercado) chartMercado.destroy();
-      chartMercado = new Chart(ctx, {
-        type: 'bar',
-        data: {
-          labels: ['Tu Elección', ...Object.keys(totTienda)],
-          datasets: [{
-            label: 'Total',
-            data: [mixto, ...Object.values(totTienda)],
-            backgroundColor: ['#0066ff', ...Object.keys(totTienda).map(() => '#cbd5e1')],
-            borderRadius: 6
-          }]
-        },
-        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
-      });
+      } catch (e) {}
 
       const histPorMes = {};
-      checkComp.forEach(i => {
+      comprasTotales.forEach(i => {
         if (!i.fecha_compra) return;
         const f = new Date(i.fecha_compra);
         const mesAnio = f.toLocaleDateString('es-CO', { month: 'short', year: 'numeric' }).toUpperCase();
         if (!histPorMes[mesAnio]) histPorMes[mesAnio] = 0;
-        histPorMes[mesAnio] += (i.precio_seleccionado * i.cantidad);
+        histPorMes[mesAnio] += (Number(i.precio_seleccionado) * Number(i.cantidad || 1));
       });
 
       const ctxHist = document.getElementById('graficaHistorico').getContext('2d');
@@ -694,11 +822,10 @@
 
       document.getElementById('listaHistoricoMensual').innerHTML = Object.keys(histPorMes).length > 0
         ? Object.keys(histPorMes).map(m => `<div class="history-row"><span>${m}</span><strong style="color:var(--success); font-size:1.05rem;">${formatearMoneda(histPorMes[m])}</strong></div>`).join('')
-        : '<p style="text-align:center; font-size:0.8rem; color:gray;">Aún no hay compras marcadas en el histórico.</p>';
+        : '<p style="text-align:center; font-size:0.8rem; color:gray;">Aún no hay compras confirmadas en el histórico.</p>';
     }
 
-    // Iniciar aplicación inmediatamente
-    cargarYRenderizar();
+    cargarTodo();
   </script>
 </body>
 </html>
